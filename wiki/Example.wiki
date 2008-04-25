@@ -75,7 +75,7 @@ public abstract class TArray<T> implements TArray_Template<T> { // TArray_Templa
 
 == Generated instance code : TArray_int.java ==
 
-Note that special replacements are done for the Jeneral class `array<T>` :
+Note that special replacements are done for the Jeneral class `com.ochafik.lang.jeneral.array<T>` :
   * `array<T>` becomes `T[]`
   * Given a variable `myArray` of type `array<T>` :
     * `myArray.get(i)` becomes `myArray[i]`
