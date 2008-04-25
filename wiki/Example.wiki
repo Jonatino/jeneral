@@ -30,7 +30,7 @@ This autogeneration is done one-the-fly in IDEs such as Eclipse and Netbeans (ju
 
 For more info on how to setup your building process to use Apt, please see the TODO Installation Page.
 
-== Template source code ==
+== Template source code : TArray.java ==
 
 {{{
 import com.ochafik.lang.jeneral.*;
