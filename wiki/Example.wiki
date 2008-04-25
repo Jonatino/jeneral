@@ -1,0 +1,18 @@
+#summary Use cases of Jalico
+
+= Introduction =
+
+
+
+Jeneral enables the creation of pure-Java templates, using annotation.
+
+It may be used to create :
+ * reified generics (that is, generics that "remember" the class they were created with during runtime)
+ * generics that operate seamlessly on primitive and non-primitive types (including when it comes to creating arrays)
+ * java templates with both class and constant parameters
+ * inline velocity scripts to generate even more bizarre classes
+
+ All this is done through the same syntax, with the same template class. A template class is a real pure-Java class, hence easily refactorable and with full support from IDEs such as Eclipse and Netbeans.
+
+It also features some nifty syntactic sugar, such as a @Property annotation (generates getters and / or setters) or @ImplementMissingMembers? (to avoid having to write all those dummy methods some interfaces feature when you only need to implement a single one).
+
