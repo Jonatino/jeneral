@@ -1,4 +1,4 @@
-#summary Introduction to Jeneral
+#summary Jeneral Introduction & Basic example
 
 = Introduction =
 
