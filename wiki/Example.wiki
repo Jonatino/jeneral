@@ -1,4 +1,4 @@
-#summary Use cases of Jalico
+#summary Introduction to Jeneral
 
 = Introduction =
 
