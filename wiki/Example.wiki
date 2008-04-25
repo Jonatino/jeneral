@@ -2,8 +2,6 @@
 
 = Introduction =
 
-
-
 Jeneral enables the creation of pure-Java templates, using annotation.
 
 It may be used to create :
@@ -12,7 +10,48 @@ It may be used to create :
  * java templates with both class and constant parameters
  * inline velocity scripts to generate even more bizarre classes
 
- All this is done through the same syntax, with the same template class. A template class is a real pure-Java class, hence easily refactorable and with full support from IDEs such as Eclipse and Netbeans.
+All this is done through the same syntax, with the same template class. A template class is a real pure-Java class, hence easily refactorable and with full support from IDEs such as Eclipse and Netbeans.
 
 It also features some nifty syntactic sugar, such as a @Property annotation (generates getters and / or setters) or @ImplementMissingMembers? (to avoid having to write all those dummy methods some interfaces feature when you only need to implement a single one).
 
+= Example = 
+
+{{{
+@Template(reifiable = true, params = { 
+	/** Initial size of the array */
+	@Param(name = "initialSize", type = Integer.class, defaultValue = 10),
+})
+public abstract class TArray<T> implements TArray_Template<T> {
+	final array<U> array;
+	public TArray(int initialSize) {
+		array = new_U_array(initialSize);
+	}
+	public TArray() {
+		this(initialSize());
+	}
+	public T get(int pos) { 
+		return array.get(pos); 
+	}
+	public void set(int pos, T value) { 
+		array.get(pos, value); 
+	}
+	public int size() { 
+		return array.length(); 
+	}
+
+	@Property
+	String simpleProperty;
+	
+	public static void main(String[] args) {
+		int size = 20;
+		
+		// Create a reified array of int[] :
+		TArray<Integer> reified = TArray_Template.Factory.newInstance(Integer.TYPE.class, size);
+		reified.setSimpleProperty("OK");
+		
+		// Create an instantiated array of int[] :
+		TArray__int instantiated = new TArray__int(size);
+		instantiated.setSimpleProperty("OK");
+	}
+}
+}}}
