@@ -20,27 +20,21 @@
 package com.ochafik.lang.jeneral;
 
 import static com.ochafik.lang.SyntaxUtils.*;
-import static com.ochafik.util.string.StringUtils.*;
 import static com.ochafik.util.string.StringUtils.implode;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 import com.ochafik.lang.jeneral.annotations.DeclareConstructor;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.ochafik.util.listenable.AdaptedCollection;
 import com.ochafik.util.listenable.Adapter;
-import com.ochafik.util.listenable.Pair;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.apt.Filer;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
@@ -52,7 +46,6 @@ import com.sun.mirror.declaration.MethodDeclaration;
 import com.sun.mirror.declaration.Modifier;
 import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.declaration.TypeDeclaration;
-import com.sun.mirror.declaration.TypeParameterDeclaration;
 import com.sun.mirror.type.ReferenceType;
 import com.sun.mirror.type.TypeMirror;
 
@@ -114,9 +107,13 @@ public class TemplateProcessor extends AbstractProcessor {
 			return prefixIfResultNotEmpty + s + suffixIfResultNotEmpty;
 		return "";
 	}
+	
+	public static <U, V> String adaptedImplosion(Collection<U> col, Adapter<U, V> adapter) {
+		return implode(new AdaptedCollection<U, V>(col, adapter));
+	}
 
 	private void processTemplateClass(ClassDeclaration decl) throws IOException {
-		Template anno = decl.getAnnotation(Template.class);
+		//Template anno = decl.getAnnotation(Template.class);
 		if (true) {//anno.reifiable()) {
 			
 			if (!decl.getModifiers().contains(Modifier.ABSTRACT)) {
@@ -180,10 +177,11 @@ public class TemplateProcessor extends AbstractProcessor {
 				}
 				
 				boolean hasDuplicates = false;
-				String paramConstructorArgs = constructorContract.getParameters().toString();
+				
+				String paramConstructorArgs = getParameterTypesString(constructorContract);
 				log("paramConstructorArgs = "+paramConstructorArgs);
 				for (MethodDeclaration existingContract : constructorContracts) {
-					if (existingContract.getParameters().toString().equals(paramConstructorArgs)) {
+					if (getParameterTypesString(existingContract).equals(paramConstructorArgs)) {
 						printError(constructorContract, "Duplicate constructor contract for parameter " + paramType);
 						printError(existingContract, "Duplicate constructor contract for parameter " + paramType);
 						hasDuplicates = true;
@@ -207,7 +205,6 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 			for (Map.Entry<FieldDeclaration, Property> propEntry : properties.entrySet()) {
 				FieldDeclaration field = propEntry.getKey();
-				Property prop = propEntry.getValue();
 				String capitalizedName = AbstractProcessor.capitalize(field.getSimpleName());
 				
 				f.format(array(
@@ -249,6 +246,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			String genericParamsUsage = wrapImplosion(genericParamNames, "<", ">");
 			
+			f.println("/// Factory class for " + decl.getSimpleName() + genericParamsUsage);
 			f.println("@SuppressWarnings(\"unchecked\")");
 			f.println("public final class " + GENERATED_REIFICATOR_NAME + " {");
 			
@@ -266,6 +264,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				
 				String fullType = decl.getQualifiedName() + genericParamsUsage;
 				f.printfn(
+					constructor.getDocComment(),
 					"public static final %s %s newInstance(%s) %s {",
 					genericParamsDefinition,
 					fullType,
@@ -290,7 +289,6 @@ public class TemplateProcessor extends AbstractProcessor {
 				
 				for (Map.Entry<FieldDeclaration, Property> propEntry : properties.entrySet()) {
 					FieldDeclaration field = propEntry.getKey();
-					Property prop = propEntry.getValue();
 					String capitalizedName = AbstractProcessor.capitalize(field.getSimpleName());
 					
 					f.format(array(
@@ -313,6 +311,7 @@ public class TemplateProcessor extends AbstractProcessor {
 						String contractThrowsClause = wrapImplosion(constructorContract.getThrownTypes(), "throws ", "");
 							
 						String paramConstructorArgsDef = implode(constructorContract.getParameters());
+						f.println(constructorContract.getDocComment());
 						f.println("@SuppressWarnings(\"unchecked\")");
 						f.println("public " + paramName + " " + constructorContract.getSimpleName() + "(" + paramConstructorArgsDef + ") " + contractThrowsClause + " {");
 						
@@ -328,10 +327,9 @@ public class TemplateProcessor extends AbstractProcessor {
 						while (paramConstructorArgsDef.contains(innerEx)) innerEx = "_" + innerEx;
 						while (paramConstructorArgsDef.contains(innerExClass)) innerExClass = "_" + innerExClass;
 						
-						Constructor<Class> cons = null;
 						f.println(array(
 							"try {",
-							paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
+							"return (" + paramName +")" + paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
 							"} catch (" + SecurityException.class.getName() + " " + exName + ") {",
 							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot access to this constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
 							"} catch (" + IllegalAccessException.class.getName() + " " + exName + ") {",
@@ -395,6 +393,14 @@ public class TemplateProcessor extends AbstractProcessor {
 			f.close();
 		}
 	}
+	private String getParameterTypesString(MethodDeclaration constructorContract) {
+		List<String> list = new ArrayList<String>();
+		for (ParameterDeclaration d : constructorContract.getParameters()) {
+			list.add(d.getType().toString());
+		}
+		return implode(list);
+	}
+
 	private void processInstantiation(Declaration decl) {
 		Instantiate instantiation = decl.getAnnotation(Instantiate.class);
 		Template template = instantiation.type().getAnnotation(Template.class);
