@@ -2,16 +2,14 @@ package com.ochafik.lang.jeneral.examples;
 
 import javax.swing.JTable;
 
+import com.ochafik.lang.jeneral.Array;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
-public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> {
-	final T[] array;
+public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, U, W> {
+	final Array<T> array;
 	//final JTable[] tables;
-	
-	@Template
-	class Sub {}
 	
 	protected abstract U new_U();
 	

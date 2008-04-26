@@ -32,12 +32,11 @@ import com.ochafik.lang.jeneral.annotations.Template;
 @Template
 public abstract class ElementsBuilder<U> implements ElementsBuilder_Template<U> {
 	 
-	// Trigger generation of getters and setters for the 'arg' property, and append it to all ElementBuilder's factory methods
+	// Generate getters and setters for the 'arg' property, and append it to all ElementBuilder's factory methods
 	@Property(inConstructors = true)
-	/** Argument for elements creation */
 	String arg;
 	
-	/// Declare that T must have a constructor T(String) that throws no checked exception, and that it should be accessible as the method new_T :
+	// Declare that T must have a constructor T(String) that throws no checked exception, and that it should be accessible as the method new_T :
 	@DeclareConstructor
 	public abstract U new_T(String arg) throws IOException;
 	
