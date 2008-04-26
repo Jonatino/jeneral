@@ -19,6 +19,8 @@
 */
 package com.ochafik.lang.jeneral.examples;
 
+import java.io.IOException;
+
 import javax.swing.JLabel;
 
 import com.ochafik.lang.jeneral.Property;
@@ -36,12 +38,9 @@ public abstract class ElementsBuilder<T> implements ElementsBuilder_Template<T> 
 	
 	// Declare that T must have a constructor T(String) that throws no checked exception, and that it should be accessible as the method new_T :
 	@DeclareConstructor
-	public abstract T new_T(final String arg);
+	public abstract T new_T(String arg) throws IOException;
 	
-	@DeclareConstructor
-	public abstract T new_T2(String arg);
-	
-	public T buildElement() {
+	public T buildElement() throws IOException {
 		return new_T(getArg());
 	}
 	
@@ -51,7 +50,11 @@ public abstract class ElementsBuilder<T> implements ElementsBuilder_Template<T> 
 		//   - classes of generic template parameter 
 		//   - constant template parameters, if any (here Test has no constant template parameter)
 		//   - arguments of the constructor that corresponds to this newInstance method (here String arg, which was added implicitely to the unique Test() constructor by the @Property(fromConstructor = true) annotation)
-		ElementsBuilder<JLabel> labelBuilder = ElementsBuilder_Template.Factory.newInstance(JLabel.class, "Default Label Text");
-		System.out.println(labelBuilder.buildElement());
+		try {
+			ElementsBuilder<JLabel> labelBuilder = ElementsBuilder_Template.Factory.newInstance(JLabel.class, "Default Label Text");
+			System.out.println(labelBuilder.buildElement());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

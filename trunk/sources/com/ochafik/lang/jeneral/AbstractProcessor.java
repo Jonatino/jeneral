@@ -158,8 +158,8 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		public void println(Object o) {
 			String ss = o.toString();
 			for (String s : ss.split("\n")) {
-				String trims = s.trim();
-				if (trims.startsWith("}")) {
+				s = s.trim();
+				if (s.startsWith("}")) {
 					indentStack.pop();
 					currentIndent = indentStack.empty() ? "" : indentStack.lastElement();
 				}
@@ -167,7 +167,7 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 				out.print(currentIndent);
 				out.println(s);
 				
-				if (trims.endsWith("{"))
+				if (s.endsWith("{"))
 					indentStack.push(currentIndent = currentIndent + "\t");
 			}
 		}
