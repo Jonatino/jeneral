@@ -13,7 +13,7 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> 
 	protected abstract U new_U();
 	
 	public TArray(int length) {
-		array = new_T_array(length);
+		array = T(length);
 		U u = new_U();
 		System.out.println(u);
 		/*try {
@@ -25,7 +25,7 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> 
 		}*/
 	}
 	public TArray(U u, V v, W w) {
-		array = new_T_array(10);
+		array = T(10);
 	}
 	
 	

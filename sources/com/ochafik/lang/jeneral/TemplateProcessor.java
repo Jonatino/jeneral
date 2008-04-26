@@ -1,30 +1,60 @@
+/*
+   Copyright 2008 Olivier Chafik
+
+   Licensed under the Apache License, Version 2.0 (the License);
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an AS IS BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   This file comes from the Jeneral project (Java Reifiable Generics & Class Templates)
+
+       http://jeneral.googlecode.com/.
+*/
 package com.ochafik.lang.jeneral;
 
 import static com.ochafik.lang.SyntaxUtils.*;
 import static com.ochafik.util.string.StringUtils.*;
+import static com.ochafik.util.string.StringUtils.implode;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import com.ochafik.lang.annotation.AbstractProcessor;
+import com.ochafik.lang.jeneral.annotations.DeclareConstructor;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.ochafik.util.listenable.AdaptedCollection;
 import com.ochafik.util.listenable.Adapter;
+import com.ochafik.util.listenable.Pair;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.apt.Filer;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
 import com.sun.mirror.declaration.ClassDeclaration;
 import com.sun.mirror.declaration.ConstructorDeclaration;
 import com.sun.mirror.declaration.Declaration;
+import com.sun.mirror.declaration.FieldDeclaration;
+import com.sun.mirror.declaration.MethodDeclaration;
 import com.sun.mirror.declaration.Modifier;
+import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.declaration.TypeDeclaration;
 import com.sun.mirror.declaration.TypeParameterDeclaration;
-import com.sun.mirror.type.InterfaceType;
 import com.sun.mirror.type.ReferenceType;
+import com.sun.mirror.type.TypeMirror;
 
 /*
 cd /Users/ochafik/Prog/Java && rm templates_logs.txt >/dev/null ; apt -factory com.ochafik.lang.templates.TemplateProcessorFactory -d classes/ -s sources/.apt_generated/ -cp sources:classes sources/com/ochafik/lang/templates/*.java && open templates_logs.txt
@@ -33,14 +63,16 @@ public class TemplateProcessor extends AbstractProcessor {
 	private static final String 
 		GENERATED_INTERFACE_SUFFIX = "_Template",
 		GENERATED_REIFICATOR_NAME = "Factory",
-		NEW_ARRAY_METHOD_FORMAT = "new_%s_array",
-		NEW_OBJECT_METHOD_FORMAT = "new_%s";
+		NEW_ARRAY_METHOD_FORMAT = "%s";
 		
-	//private Class<?> dep = ReificationUtils.class;
+	private Class<?>[] deps = array(
+		ReificationUtils.class,
+		TemplatesHelper.class
+	);
 
 	public TemplateProcessor(AnnotationProcessorEnvironment env){
 		super(env);
-		log("Template Processor created");
+		//log("Template Processor created");
 	}
 
 	static String computeInstanceName(String baseName, TypeDeclaration... types) {
@@ -75,10 +107,17 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 	}
+	
+	public static <E> String wrapImplosion(Collection<E> col, String prefixIfResultNotEmpty, String suffixIfResultNotEmpty) {
+		String s = implode(col);
+		if (s.length() > 0)
+			return prefixIfResultNotEmpty + s + suffixIfResultNotEmpty;
+		return "";
+	}
 
 	private void processTemplateClass(ClassDeclaration decl) throws IOException {
 		Template anno = decl.getAnnotation(Template.class);
-		if (anno.reifiable()) {
+		if (true) {//anno.reifiable()) {
 			
 			if (!decl.getModifiers().contains(Modifier.ABSTRACT)) {
 				printError(decl, "Template "+decl.getQualifiedName()+" must be declared as abstract.");
@@ -93,9 +132,9 @@ public class TemplateProcessor extends AbstractProcessor {
 			//String interface
 			
 			String packageName = decl.getPackage().getQualifiedName();
-			String genericParamsDefinition = implode(decl.getFormalTypeParameters());
-			if (genericParamsDefinition.length() > 0)
-				genericParamsDefinition = "<" + genericParamsDefinition + ">";
+			String genericParamsDefinition = wrapImplosion(decl.getFormalTypeParameters(), "<", ">");
+			
+			List<String> genericParamNames = new ArrayList<String>(getFormalTypeNames(decl));
 			
 			f.format(array(
 					"//",
@@ -103,7 +142,7 @@ public class TemplateProcessor extends AbstractProcessor {
 					"//",
 					packageName.length() == 0 ? null : "package {1};",
 					"",
-					"@{2}",
+					//"@{2}",
 					"interface {3}{4} '{'"
 				), 
 				decl.getQualifiedName(), 
@@ -114,46 +153,101 @@ public class TemplateProcessor extends AbstractProcessor {
 				getClass().getName()
 			);
 			
-			List<String> genericParamNames = new ArrayList<String>(getFormalTypeNames(decl));
-			for (String type : genericParamNames) {
+			Map<String, List<MethodDeclaration>> paramConstructorContractsByParam = new HashMap<String, List<MethodDeclaration>>();
+			for (MethodDeclaration constructorContract : decl.getMethods()) {
+				DeclareConstructor declAnn = constructorContract.getAnnotation(DeclareConstructor.class);
+				if (declAnn == null)
+					continue;
+				
+				if (!constructorContract.getModifiers().contains(Modifier.ABSTRACT)) {
+					printError(constructorContract, "Template parameter constructor declarations must be abstract methods !");
+					continue;
+				}
+				TypeMirror m = constructorContract.getReturnType();
+				String paramType = m.toString();
+				if (!genericParamNames.contains(paramType)) {
+					printError(constructorContract, "Template parameter constructor declarations must have a return type that matches one of the template parameters !");
+					continue;
+				}
+				if (!constructorContract.getFormalTypeParameters().isEmpty()) {
+					printError(constructorContract, "Template parameter constructor declarations cannot be generics");
+					continue;
+				}
+				List<MethodDeclaration> constructorContracts = paramConstructorContractsByParam.get(paramType);
+				if (constructorContracts == null) {
+					constructorContracts = new ArrayList<MethodDeclaration>();
+					paramConstructorContractsByParam.put(paramType, constructorContracts);
+				}
+				
+				boolean hasDuplicates = false;
+				String paramConstructorArgs = constructorContract.getParameters().toString();
+				log("paramConstructorArgs = "+paramConstructorArgs);
+				for (MethodDeclaration existingContract : constructorContracts) {
+					if (existingContract.getParameters().toString().equals(paramConstructorArgs)) {
+						printError(constructorContract, "Duplicate constructor contract for parameter " + paramType);
+						printError(existingContract, "Duplicate constructor contract for parameter " + paramType);
+						hasDuplicates = true;
+					}
+				}
+				if (!hasDuplicates)
+					constructorContracts.add(constructorContract);
+			}
+			
+			Map<FieldDeclaration, Property> properties = new HashMap<FieldDeclaration, Property>();
+			List<FieldDeclaration> propertiesToAddToConstructors = new ArrayList<FieldDeclaration>();
+			//Map<Property, Pair<TypeMirror, String>> properties = new HashMap<Property, Pair<TypeMirror,String>>();
+			for (FieldDeclaration field : decl.getFields()) {
+				Property prop = field.getAnnotation(Property.class);
+				if (prop == null)
+					continue;
+				
+				properties.put(field, prop);
+				if (prop.inConstructors())
+					propertiesToAddToConstructors.add(field);
+			}
+			for (Map.Entry<FieldDeclaration, Property> propEntry : properties.entrySet()) {
+				FieldDeclaration field = propEntry.getKey();
+				Property prop = propEntry.getValue();
+				String capitalizedName = AbstractProcessor.capitalize(field.getSimpleName());
+				
 				f.format(array(
-						"/**",
-						"	Returns the class of the generic parameter {1}",
-						"*/",
+						field.getDocComment(),
+						"{0} get{2}();", 
+						"",
+						field.getDocComment(),
+						"void set{2}({0} {1});", 
+						""
+					),
+					field.getType(),
+					field.getSimpleName(),
+					capitalizedName
+				);
+			}
+			
+			for (String type : genericParamNames) {
+				String lengthName = "arraySize";
+				if (lengthName.equals(type))
+					lengthName = "_" + lengthName;
+				
+				f.format(array(
+						"/** Returns the class of the generic parameter {1} */",
 						"{0}<{1}> {1}();", 
 						"",
-						"/**",
-						"	Creates a new array of elements of class {1}.<br/>",
-						"	Equivalent to a call to java.lang.reflect.Array.newInstance({2}.{1}(), length)",
-						"*/",
-						"{1}[] " + String.format(NEW_ARRAY_METHOD_FORMAT, type) + "(int length);",
-//						"",
-//						"/**",
-//						"	Creates a new instance of class {1}, using its default constructor.<br/>",
-//						"	Equivalent to a call to {2}.newInstance()",
-//						"*/",
-//						"{1} " + String.format(NEW_OBJECT_METHOD_FORMAT, type) + "()" +(anno.paramFactoryThrowsExceptions() ? " throws {3}, {4};" : ";"),
+						"/** Creates a new array of elements of class {1}.<br/>",
+						"    Equivalent to a call to java.lang.reflect.Array.newInstance({2}.{1}(), " + lengthName + ") */",
+						"{3}<{1}> " + String.format(NEW_ARRAY_METHOD_FORMAT, type) + "(int length);",
 						""
 					),
 					Class.class.getName(),
 					type, 
 					interfaceName,
-					InstantiationException.class.getName(),
-					IllegalAccessException.class.getName()
+					Array.class.getName()
 				);
 				
+				
 			}
-			/*String genericParamsDefinition = implode(new AdaptedCollection<TypeParameterDeclaration, String>(decl.getFormalTypeParameters(), new Adapter<TypeParameterDeclaration, String>() { public String adapt(TypeParameterDeclaration value) {
-				return value.getSimpleName() + (value.getBounds().isEmpty() ? "" : " extends " + implode(value.getBounds()));//.toString();
-			}}));
 			
-			if (genericParamsDefinition.length() > 0)
-				genericParamsDefinition = "<" + genericParamsDefinition + ">";
-			*/
-			
-			String genericParamsUsage = implode(genericParamNames);
-			if (genericParamsUsage.length() > 0)
-				genericParamsUsage = "<" + genericParamsUsage + ">";
+			String genericParamsUsage = wrapImplosion(genericParamNames, "<", ">");
 			
 			f.println("@SuppressWarnings(\"unchecked\")");
 			f.println("public final class " + GENERATED_REIFICATOR_NAME + " {");
@@ -162,18 +256,19 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (!constructor.getModifiers().contains(Modifier.PUBLIC))
 					continue;
 				
-				Collection<ReferenceType> throwns = constructor.getThrownTypes();
-				String throwsClause = throwns.isEmpty() ? "" : "throws " + implode(throwns, ", ");
+				String throwsClause = wrapImplosion(constructor.getThrownTypes(), "throws ", "");
 				
 				List<String> factoryArgsDeclaration = new ArrayList<String>();
 				collectGenericParamsArgumentsDeclaration(genericParamNames, true, false, factoryArgsDeclaration);
 				collectArgumentsDeclaration(constructor.getParameters(), false, false, factoryArgsDeclaration);
+				for (FieldDeclaration propertyField : propertiesToAddToConstructors)
+					factoryArgsDeclaration.add(propertyField.getType() + " " + propertyField.toString());
 				
+				String fullType = decl.getQualifiedName() + genericParamsUsage;
 				f.printfn(
-					"public static final %s %s%s newInstance(%s) %s {",
+					"public static final %s %s newInstance(%s) %s {",
 					genericParamsDefinition,
-					decl.getQualifiedName(), 
-					genericParamsUsage,
+					fullType,
 					implode(factoryArgsDeclaration), 
 					throwsClause); 
 						 
@@ -184,15 +279,93 @@ public class TemplateProcessor extends AbstractProcessor {
 				collectGenericParamsArgumentsDeclaration(genericParamNames, false, true, argCall);
 				collectArgumentsDeclaration(constructor.getParameters(), false, true, argCall);
 				
-				
+				String instanceName = "instance";
+				while (genericParamNames.contains(instanceName)) instanceName = "_" + instanceName;
 				f.printfn(
-					"return new %s(%s) {",
-					 decl.getQualifiedName(), 
-					 implode(constructorArgNames, ", "));
+					"%s %s = new %s(%s) {",
+					fullType,
+					instanceName,
+					decl.getSimpleName(),
+					implode(constructorArgNames, ", "));
+				
+				for (Map.Entry<FieldDeclaration, Property> propEntry : properties.entrySet()) {
+					FieldDeclaration field = propEntry.getKey();
+					Property prop = propEntry.getValue();
+					String capitalizedName = AbstractProcessor.capitalize(field.getSimpleName());
+					
+					f.format(array(
+							field.getDocComment(),
+							"public {0} get{2}() '{' return {1}; '}'", 
+							"",
+							field.getDocComment(),
+							"public void set{2}({0} {1}) '{' this.{1} = {1}; '}'", 
+							""
+						),
+						field.getType(),
+						field.getSimpleName(),
+						capitalizedName
+					);
+				}
+				
+				for (Map.Entry<String, List<MethodDeclaration>> e : paramConstructorContractsByParam.entrySet()) {
+					String paramName = e.getKey();
+					for (MethodDeclaration constructorContract : e.getValue()) {
+						String contractThrowsClause = wrapImplosion(constructorContract.getThrownTypes(), "throws ", "");
+							
+						String paramConstructorArgsDef = implode(constructorContract.getParameters());
+						f.println("@SuppressWarnings(\"unchecked\")");
+						f.println("public " + paramName + " " + constructorContract.getSimpleName() + "(" + paramConstructorArgsDef + ") " + contractThrowsClause + " {");
+						
+						List<String> paramConstructorArgsTypes = new ArrayList<String>();
+						List<String> paramConstructorArgsNames = new ArrayList<String>();
+						for (ParameterDeclaration d : constructorContract.getParameters()) {
+							paramConstructorArgsTypes.add(d.getType() + ".class");
+							paramConstructorArgsNames.add(d.getSimpleName());
+						}
+
+						String exName = "ex", innerEx = "innerEx", innerExClass = "innerExClass";
+						while (paramConstructorArgsDef.contains(exName)) exName = "_" + exName;
+						while (paramConstructorArgsDef.contains(innerEx)) innerEx = "_" + innerEx;
+						while (paramConstructorArgsDef.contains(innerExClass)) innerExClass = "_" + innerExClass;
+						
+						Constructor<Class> cons = null;
+						f.println(array(
+							"try {",
+							paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
+							"} catch (" + SecurityException.class.getName() + " " + exName + ") {",
+							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot access to this constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
+							"} catch (" + IllegalAccessException.class.getName() + " " + exName + ") {",
+							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot invoke the constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
+							"} catch (" + NoSuchMethodException.class.getName() + " " + exName + ") {",
+							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter class \" + " + paramName + "().getClass().getName() + \" does not have the expected constructor\", " + exName + ");",
+							"} catch (" + IllegalArgumentException.class.getName() + " " + exName + ") {",
+							"	throw new " + RuntimeException.class.getName() + "(\"Internal Jeneral exception\", " + exName + ");",
+							"} catch (" + InstantiationException.class.getName() + " " + exName + ") {",
+							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter class \" + " + paramName + "().getClass().getName() + \" is abstract and cannot be instantiated\", " + exName + ");",
+							"} catch (" + InvocationTargetException.class.getName() + " " + exName + ") {",
+							"	// for newInstance",
+							"	" + Throwable.class.getName() + " " + innerEx + " = " + exName + ".getCause();",
+							"	" + Class.class.getName() + "<? extends " + Throwable.class.getName() + "> " + innerExClass + " = " + innerEx + ".getClass();"
+						));
+						for (ReferenceType expectedException : constructorContract.getThrownTypes())
+							f.println("if (" + expectedException + ".class.isAssignableFrom(" + innerExClass + ")) throw (" + expectedException + ")" + innerEx + ";");
+						
+						f.println(array(
+							"	throw new " + RuntimeException.class.getName() + "(\"Internal error : parameter type constructor throws more than expected !\", " + innerEx + ");",
+							"}"
+						));
+						
+						f.println("}");
+					}
+				}
 				
 				for (int i = 0, len = genericParamNames.size(); i < len; i++) {
 					String type = genericParamNames.get(i);
 					String argName = paramClassesArgNames.get(i);
+		
+					String lengthName = "arraySize";
+					if (lengthName.equals(type))
+						lengthName = "_" + lengthName;
 					
 					f.format(array(
 						"public final {0}<{1}> {1}() '{'",
@@ -202,36 +375,18 @@ public class TemplateProcessor extends AbstractProcessor {
 						type,
 						argName);
 					
-					f.format(array(
-							"public final {0}[] " + String.format(NEW_ARRAY_METHOD_FORMAT, type) + "(int length) '{'",
-								"return ({0}[]){1}.newInstance({2}, length);", 
-							"'}'"), 
-							type, 
-							java.lang.reflect.Array.class.getName(), 
-							argName);
-				/*		
-					f.format(array(
-							"public final {0} " + String.format(NEW_OBJECT_METHOD_FORMAT, type) + "()"+(anno.paramFactoryThrowsExceptions() ? " throws {1}, {2} '{'" : " '{'"),
-								anno.paramFactoryThrowsExceptions() ?
-									null : 
-									"try '{'",
-								"return {3}.newInstance();",
-								anno.paramFactoryThrowsExceptions() ? 
-									null :
-									"'}' catch ({1} ex) '{'\n" +
-										"throw new RuntimeException(ex);\n" +
-									"'}' catch ({2} ex) '{'\n" +
-										"throw new RuntimeException(ex);\n" +
-									"'}'",
-							"'}'"), 
-							type, 
-							InstantiationException.class.getName(),
-							IllegalAccessException.class.getName(),
-							argName);
-				*/			
-					
+					//f.format(array(
+					f.println("public final " + Array.class.getName() + "<" + type + "> " + type + "(int " + lengthName + ") {");
+					f.println("return " + ReificationUtils.class.getName() + ".newArray(" + argName + ", " + lengthName + ");");
+					f.println("}");
 				}
 				f.println("};");
+				for (FieldDeclaration propertyField : propertiesToAddToConstructors) {
+					String propertyName = propertyField.getSimpleName();
+					f.format("{0}.set{2}({1});", instanceName, propertyName, AbstractProcessor.capitalize(propertyName));
+				}
+				
+				f.println("return " + instanceName + ";");
 				f.println("}");
 			}
 			f.println("}");
@@ -240,21 +395,13 @@ public class TemplateProcessor extends AbstractProcessor {
 			f.close();
 		}
 	}
-	private void processInstantiation(Declaration decl) throws IOException {
+	private void processInstantiation(Declaration decl) {
 		Instantiate instantiation = decl.getAnnotation(Instantiate.class);
 		Template template = instantiation.type().getAnnotation(Template.class);
 		if (template == null) {
 			printError(decl, "Type " + instantiation.type().getName() + " is not a template. You must annotate it with " + Template.class.getName());
 			return;
 		}
-	}
-
-	private boolean implementsInterface(ClassDeclaration decl, String interfaceQualifiedName) {
-		for (InterfaceType interf : decl.getSuperinterfaces()) {
-			if (interf.getDeclaration().getQualifiedName().equals(interfaceQualifiedName))
-				return true;
-		}
-		return false;
 	}
 }
 
