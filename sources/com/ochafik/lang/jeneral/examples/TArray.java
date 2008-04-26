@@ -2,12 +2,15 @@ package com.ochafik.lang.jeneral.examples;
 
 import javax.swing.JTable;
 
+import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.Template;
 
-@Template(reifiable = true)
+@Template
 public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> {
 	final T[] array;
 	//final JTable[] tables;
+	
+	protected abstract U new_U();
 	
 	public TArray(int length) {
 		array = new_T_array(length);

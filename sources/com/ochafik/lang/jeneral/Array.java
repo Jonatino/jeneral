@@ -1,6 +1,6 @@
 package com.ochafik.lang.jeneral;
 
-import com.ochafik.lang.templates.annotations.TemplatesHelper;
+import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 
 @TemplatesHelper
 public interface Array<T> {
