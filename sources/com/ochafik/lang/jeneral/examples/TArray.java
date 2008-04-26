@@ -10,6 +10,9 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> 
 	final T[] array;
 	//final JTable[] tables;
 	
+	@Template
+	class Sub {}
+	
 	protected abstract U new_U();
 	
 	public TArray(int length) {

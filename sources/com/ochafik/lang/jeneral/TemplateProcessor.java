@@ -37,6 +37,7 @@ import com.ochafik.util.listenable.AdaptedCollection;
 import com.ochafik.util.listenable.Adapter;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.apt.Filer;
+import com.sun.mirror.declaration.AnnotationMirror;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
 import com.sun.mirror.declaration.ClassDeclaration;
 import com.sun.mirror.declaration.ConstructorDeclaration;
@@ -113,12 +114,26 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 
 	private void processTemplateClass(ClassDeclaration decl) throws IOException {
+		AnnotationMirror templateAnnotationMirror = null;
+		for (AnnotationMirror annoMirror : decl.getAnnotationMirrors()) {
+			if (annoMirror.getAnnotationType().toString().equals(Template.class.getName())) {
+				templateAnnotationMirror = annoMirror;
+				break;
+			}
+		}
+		if (templateAnnotationMirror == null) 
+			return;
+		
 		//Template anno = decl.getAnnotation(Template.class);
 		if (true) {//anno.reifiable()) {
 			
+			if (decl.getDeclaringType() != null) {
+				printError(templateAnnotationMirror.getPosition(), "Cannot define nested classes as templates.");
+				return;
+			}
+			
 			if (!decl.getModifiers().contains(Modifier.ABSTRACT)) {
 				printError(decl, "Template "+decl.getQualifiedName()+" must be declared as abstract.");
-				return;
 			}
 			
 			Filer filer = environment.getFiler();
@@ -132,6 +147,9 @@ public class TemplateProcessor extends AbstractProcessor {
 			String genericParamsDefinition = wrapImplosion(decl.getFormalTypeParameters(), "<", ">");
 			
 			List<String> genericParamNames = new ArrayList<String>(getFormalTypeNames(decl));
+			
+			log("decl.getSuperinterfaces() = " + decl.getSuperinterfaces());
+			
 			
 			f.format(array(
 					"//",
@@ -179,7 +197,6 @@ public class TemplateProcessor extends AbstractProcessor {
 				boolean hasDuplicates = false;
 				
 				String paramConstructorArgs = getParameterTypesString(constructorContract);
-				log("paramConstructorArgs = "+paramConstructorArgs);
 				for (MethodDeclaration existingContract : constructorContracts) {
 					if (getParameterTypesString(existingContract).equals(paramConstructorArgs)) {
 						printError(constructorContract, "Duplicate constructor contract for parameter " + paramType);
@@ -207,18 +224,16 @@ public class TemplateProcessor extends AbstractProcessor {
 				FieldDeclaration field = propEntry.getKey();
 				String capitalizedName = AbstractProcessor.capitalize(field.getSimpleName());
 				
-				f.format(array(
-						field.getDocComment(),
-						"{0} get{2}();", 
-						"",
-						field.getDocComment(),
-						"void set{2}({0} {1});", 
-						""
-					),
-					field.getType(),
-					field.getSimpleName(),
-					capitalizedName
-				);
+				f.println(field.getDocComment());
+				f.format("{0} get{2}();",
+						field.getType(),
+						field.getSimpleName(),
+						capitalizedName);
+				f.println(field.getDocComment());
+				f.format("void set{2}({0} {1});",
+						field.getType(),
+						field.getSimpleName(),
+						capitalizedName);
 			}
 			
 			for (String type : genericParamNames) {
@@ -263,8 +278,8 @@ public class TemplateProcessor extends AbstractProcessor {
 					factoryArgsDeclaration.add(propertyField.getType() + " " + propertyField.toString());
 				
 				String fullType = decl.getQualifiedName() + genericParamsUsage;
+				f.println(constructor.getDocComment());
 				f.printfn(
-					constructor.getDocComment(),
 					"public static final %s %s newInstance(%s) %s {",
 					genericParamsDefinition,
 					fullType,
@@ -291,18 +306,18 @@ public class TemplateProcessor extends AbstractProcessor {
 					FieldDeclaration field = propEntry.getKey();
 					String capitalizedName = AbstractProcessor.capitalize(field.getSimpleName());
 					
-					f.format(array(
-							field.getDocComment(),
-							"public {0} get{2}() '{' return {1}; '}'", 
-							"",
-							field.getDocComment(),
-							"public void set{2}({0} {1}) '{' this.{1} = {1}; '}'", 
-							""
-						),
-						field.getType(),
-						field.getSimpleName(),
-						capitalizedName
-					);
+					f.println(field.getDocComment());
+					f.format("public {0} get{2}() '{' return {1}; '}'",
+							field.getType(),
+							field.getSimpleName(),
+							capitalizedName);
+					f.println();
+					f.println(field.getDocComment());
+					f.format("public void set{2}({0} {1}) '{' this.{1} = {1}; '}'",
+							field.getType(),
+							field.getSimpleName(),
+							capitalizedName);
+					f.println();
 				}
 				
 				for (Map.Entry<String, List<MethodDeclaration>> e : paramConstructorContractsByParam.entrySet()) {
@@ -341,7 +356,6 @@ public class TemplateProcessor extends AbstractProcessor {
 							"} catch (" + InstantiationException.class.getName() + " " + exName + ") {",
 							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter class \" + " + paramName + "().getClass().getName() + \" is abstract and cannot be instantiated\", " + exName + ");",
 							"} catch (" + InvocationTargetException.class.getName() + " " + exName + ") {",
-							"	// for newInstance",
 							"	" + Throwable.class.getName() + " " + innerEx + " = " + exName + ".getCause();",
 							"	" + Class.class.getName() + "<? extends " + Throwable.class.getName() + "> " + innerExClass + " = " + innerEx + ".getClass();"
 						));
@@ -349,7 +363,7 @@ public class TemplateProcessor extends AbstractProcessor {
 							f.println("if (" + expectedException + ".class.isAssignableFrom(" + innerExClass + ")) throw (" + expectedException + ")" + innerEx + ";");
 						
 						f.println(array(
-							"	throw new " + RuntimeException.class.getName() + "(\"Internal error : parameter type constructor throws more than expected !\", " + innerEx + ");",
+							"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter constructor throwed a undeclared checked exception of type \", " + innerEx + ".getClass().getName(), " + innerEx + ");",
 							"}"
 						));
 						
@@ -392,7 +406,9 @@ public class TemplateProcessor extends AbstractProcessor {
 			f.println("}");
 			f.close();
 		}
+		
 	}
+	
 	private String getParameterTypesString(MethodDeclaration constructorContract) {
 		List<String> list = new ArrayList<String>();
 		for (ParameterDeclaration d : constructorContract.getParameters()) {

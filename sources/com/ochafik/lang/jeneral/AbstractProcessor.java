@@ -156,6 +156,9 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 				println(t);
 		}
 		public void println(Object o) {
+			if (o == null)
+				return;
+			
 			String ss = o.toString();
 			for (String s : ss.split("\n")) {
 				s = s.trim();
@@ -176,13 +179,13 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 			out.close();
 		}
 		public void format(String[] strings, Object... args) {
-			for (String ff : strings) {
-				if (ff == null) 
-					continue;
+			for (String ff : strings)
 				format(ff, args);
-			}
 		}
 		public void format(String f, Object... args) {
+			if (f == null)
+				return; 
+			
 			try {
 				println(MessageFormat.format(f, args));
 			} catch (Throwable t) {
