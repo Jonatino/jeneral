@@ -32,6 +32,8 @@ public class Templates {
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target({ElementType.METHOD, ElementType.FIELD})
 	public @interface TemplatesPrimitive {}
+
+	public final class PrimitiveTypes {}
 	
 	@SuppressWarnings("unchecked")
 	@TemplatesPrimitive
