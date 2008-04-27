@@ -29,9 +29,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE) // TODO implement bytecode template instantiation later
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Instantiate {
-	boolean useParametersLongName() default false;
-	Param[] params();
-	
-	@AnnotatedValue(Template.class)
-	Class<?> type();
+	boolean useQualifiedParametersName() default false;
+	Class<?>[] params();
+	Class<?> template();
 }

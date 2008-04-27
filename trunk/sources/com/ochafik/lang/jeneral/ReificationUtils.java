@@ -21,6 +21,7 @@ package com.ochafik.lang.jeneral;
 
 public class ReificationUtils {
 	
+	@SuppressWarnings("unchecked")
 	public static <T> Array<T> newArray(Class<T> c, final int length) {
 		if (!c.isPrimitive())
 			return new DefaultArray<T>((T[])java.lang.reflect.Array.newInstance(c, length));
@@ -33,6 +34,90 @@ public class ReificationUtils {
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
 					return (T)(Integer)array[i]; 
+				}
+				public Object getArray() { return array; }
+				public int length() { return array.length; }
+			};
+		}
+		else if (c == Long.TYPE) {
+			return new Array<T>() {
+				final long[] array = new long[length];
+				public void set(int i, T value) { 
+					array[i] = ((Long)value).longValue(); 
+				}
+				@SuppressWarnings("unchecked")
+				public T get(int i) { 
+					return (T)(Long)array[i]; 
+				}
+				public Object getArray() { return array; }
+				public int length() { return array.length; }
+			};
+		}
+		else if (c == Integer.TYPE) {
+			return new Array<T>() {
+				final short[] array = new short[length];
+				public void set(int i, T value) { 
+					array[i] = ((Short)value).shortValue(); 
+				}
+				@SuppressWarnings("unchecked")
+				public T get(int i) { 
+					return (T)(Short)array[i]; 
+				}
+				public Object getArray() { return array; }
+				public int length() { return array.length; }
+			};
+		}
+		else if (c == Integer.TYPE) {
+			return new Array<T>() {
+				final byte[] array = new byte[length];
+				public void set(int i, T value) { 
+					array[i] = ((Byte)value).byteValue(); 
+				}
+				@SuppressWarnings("unchecked")
+				public T get(int i) { 
+					return (T)(Byte)array[i]; 
+				}
+				public Object getArray() { return array; }
+				public int length() { return array.length; }
+			};
+		}
+		else if (c == Integer.TYPE) {
+			return new Array<T>() {
+				final char[] array = new char[length];
+				public void set(int i, T value) { 
+					array[i] = ((Character)value).charValue(); 
+				}
+				@SuppressWarnings("unchecked")
+				public T get(int i) { 
+					return (T)(Character)array[i]; 
+				}
+				public Object getArray() { return array; }
+				public int length() { return array.length; }
+			};
+		}
+		else if (c == Integer.TYPE) {
+			return new Array<T>() {
+				final float[] array = new float[length];
+				public void set(int i, T value) { 
+					array[i] = ((Float)value).floatValue(); 
+				}
+				@SuppressWarnings("unchecked")
+				public T get(int i) { 
+					return (T)(Float)array[i]; 
+				}
+				public Object getArray() { return array; }
+				public int length() { return array.length; }
+			};
+		}
+		else if (c == Integer.TYPE) {
+			return new Array<T>() {
+				final double[] array = new double[length];
+				public void set(int i, T value) { 
+					array[i] = ((Double)value).doubleValue(); 
+				}
+				@SuppressWarnings("unchecked")
+				public T get(int i) { 
+					return (T)(Double)array[i]; 
 				}
 				public Object getArray() { return array; }
 				public int length() { return array.length; }
