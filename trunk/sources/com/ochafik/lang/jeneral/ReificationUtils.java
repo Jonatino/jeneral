@@ -24,7 +24,7 @@ public class ReificationUtils {
 	@SuppressWarnings("unchecked")
 	public static <T> Array<T> newArray(Class<T> c, final int length) {
 		if (!c.isPrimitive())
-			return new DefaultArray<T>((T[])java.lang.reflect.Array.newInstance(c, length));
+			return new NonPrimitiveArray<T>((T[])java.lang.reflect.Array.newInstance(c, length));
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final int[] array = new int[length];

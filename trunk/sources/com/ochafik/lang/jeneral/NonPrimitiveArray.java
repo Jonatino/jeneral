@@ -19,13 +19,15 @@
 */
 package com.ochafik.lang.jeneral;
 
-class DefaultArray<T> implements Array<T> {
+class NonPrimitiveArray<T> implements Array<T> {
 	T[] array;
-	public DefaultArray(T[] array) {
+	public NonPrimitiveArray(T[] array) {
 		if (array == null)
 			throw new NullPointerException("null array !");
 		if (!array.getClass().isArray())
 			throw new IllegalArgumentException("Not an array : "+array);
+		if (array.getClass().getComponentType().isPrimitive())
+			throw new IllegalArgumentException("Primitive arrays not handled by "+getClass().getName() +" !");
 		
 		this.array = array;
 	}
