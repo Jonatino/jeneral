@@ -1,0 +1,10 @@
+#summary Setup and configuration
+
+= Java 6 =
+Just compile your code with javac, making sure jeneral.jar is in your classpath
+
+= Java 5 =
+Use apt instead of javac to compile your code
+
+= Eclipse =
+[http://help.eclipse.org/help33/index.jsp?topic=/org.eclipse.jdt.doc.isv/guide/jdt_apt_getting_started.htm Configure Apt in Eclipse]
