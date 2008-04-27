@@ -19,7 +19,71 @@
 */
 package com.ochafik.lang.jeneral;
 
+import static com.ochafik.util.string.StringUtils.implode;
+
+import java.lang.reflect.InvocationTargetException;
+
 public class ReificationUtils {
+	
+	@SuppressWarnings("unchecked")
+	public static <T> T getNeutralValue(Class<T> c) {
+		if (!c.isPrimitive())
+			return null;
+		else if (c == Integer.TYPE)
+			return (T)new Integer(0);
+		else if (c == Long.TYPE)
+			return (T)new Long(0);
+		else if (c == Double.TYPE)
+			return (T)new Double(0);
+		else if (c == Short.TYPE)
+			return (T)new Short((short)0);
+		else if (c == Byte.TYPE)
+			return (T)new Byte((byte)0);
+		else if (c == Character.TYPE)
+			return (T)new Character((char)0);
+		else if (c == Float.TYPE)
+			return (T)new Float(0);
+			
+		throw new UnsupportedOperationException();
+	}
+	
+	public static <T> T newInstance(Class<T> c, Class<?>[] argTypes, Object[] args) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+		if (!c.isPrimitive())
+			return (T)c.getConstructor(argTypes).newInstance(args);
+		
+		if (argTypes.length != args.length)
+			throw new IllegalArgumentException();
+		
+		if (argTypes.length > 1)
+			throw new NoSuchMethodException("Primitive cannot be constructed with more than one value");
+		
+		if (argTypes.length == 0) {
+			return getNeutralValue(c);
+		}
+		Class<?> cc = argTypes[0];
+		if (!c.isAssignableFrom(cc))
+			throw new NoSuchMethodException(c + " cannot be constructed from a " + cc);
+			
+		Object a = args[0];
+ 		if (c == Integer.TYPE)
+			return (T)(Integer)a;
+		else if (c == Long.TYPE)
+			return (T)(Long)a;
+		else if (c == Double.TYPE)
+			return (T)(Double)a;
+		else if (c == Short.TYPE)
+			return (T)(Short)a;
+		else if (c == Byte.TYPE)
+			return (T)(Byte)a;
+		else if (c == Character.TYPE)
+			return (T)(Character)a;
+		else if (c == Float.TYPE)
+			return (T)(Float)a;
+			
+		throw new UnsupportedOperationException();
+		
+	}
+	//	"return (" + paramName +")" + paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
 	
 	@SuppressWarnings("unchecked")
 	public static <T> Array<T> newArray(Class<T> c, final int length) {

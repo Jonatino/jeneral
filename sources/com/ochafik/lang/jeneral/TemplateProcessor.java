@@ -33,10 +33,11 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.ochafik.lang.jeneral.annotations.DeclareConstructor;
+import com.ochafik.lang.jeneral.annotations.Initializer;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
+import com.ochafik.util.listenable.Pair;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.declaration.AnnotationMirror;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
@@ -81,7 +82,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		List<String> genericParamNames;
 		String genericParamsUsage;
 		
-		Map<String, List<MethodDeclaration>> paramConstructorContracts;
+		Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> paramConstructorContracts;
 		List<FieldDeclaration> properties;
 		List<FieldDeclaration> propertiesToAddToConstructors;
 		String qualifiedTemplateInterfaceNameWithGenericsUsage;
@@ -402,12 +403,22 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	/**
 	Generate generic parameter constructing methods, based on param constructor contracts such as :
- 	@@DeclareConstructor T new_T(...) throws ...;
+ 	@@Initializer T new_T(...) throws ...;
 	*/
 	private void writeGenericParameterConstructingMethodsCode(LinesFormatter f, TemplateInfo templateClassInfo) {
-		for (Map.Entry<String, List<MethodDeclaration>> e : templateClassInfo.paramConstructorContracts.entrySet()) {
+		for (Map.Entry<String, Pair<MethodDeclaration, List<MethodDeclaration>>> e : templateClassInfo.paramConstructorContracts.entrySet()) {
 			String paramName = e.getKey();
-			for (MethodDeclaration constructorContract : e.getValue()) {
+			
+			MethodDeclaration neutralValueDeclaration = e.getValue().getFirst();
+			if (neutralValueDeclaration != null) {
+				f.println(neutralValueDeclaration.getDocComment());
+				f.println("@SuppressWarnings(\"unchecked\")");
+				f.println("public " + paramName + " " + neutralValueDeclaration.getSimpleName() + "() {");
+				f.println("return " + ReificationUtils.class.getName() + ".getNeutralValue(" + paramName + ");");
+				//f.println("return " + paramName + "().isPrimitive() ? (" + paramName + ")0 : null;");
+				f.println("}");
+			}
+			for (MethodDeclaration constructorContract : e.getValue().getSecond()) {
 				String contractThrowsClause = wrappedImplosion(constructorContract.getThrownTypes(), "throws ", "");
 					
 				String paramConstructorArgsDef = implode(constructorContract.getParameters());
@@ -430,7 +441,8 @@ public class TemplateProcessor extends AbstractProcessor {
 				
 				f.println(array(
 					"try {",
-					"return (" + paramName +")" + paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
+					"return " + ReificationUtils.class.getName() + ".newInstance(" + paramName +", new Class[] {" + implode(paramConstructorArgsTypes) + "}, new Object[] {" + implode(paramConstructorArgsNames) + "});",
+					//"return (" + paramName +")" + paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
 					"} catch (" + SecurityException.class.getName() + " " + exName + ") {",
 					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot access to this constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
 					"} catch (" + IllegalAccessException.class.getName() + " " + exName + ") {",
@@ -461,14 +473,20 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	/**
 	Get the list of generic parameter constructing methods contracts such as :
- 	@@DeclareConstructor T new_T(...) throws ...;
+ 	@@Initializer T new_T(...) throws ...;
 	*/
-	private Map<String, List<MethodDeclaration>> getGenericParamConstructorsContracts(ClassDeclaration decl, List<String> genericParamNames) {
-		Map<String, List<MethodDeclaration>> paramConstructorContractsByParam = new HashMap<String, List<MethodDeclaration>>();
+	private Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> getGenericParamConstructorsContracts(ClassDeclaration decl, List<String> genericParamNames) {
+		Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> paramConstructorContractsByParam = new HashMap<String, Pair<MethodDeclaration,List<MethodDeclaration>>>();
 		for (MethodDeclaration constructorContract : decl.getMethods()) {
-			DeclareConstructor declAnn = constructorContract.getAnnotation(DeclareConstructor.class);
+			Initializer declAnn = constructorContract.getAnnotation(Initializer.class);
 			if (declAnn == null)
 				continue;
+			
+			boolean canReturnNeutralValue = constructorContract.getParameters().size() == 0;
+			
+			if (declAnn.returnNeutralValue() && !canReturnNeutralValue) {
+				printError(constructorContract, "Neutral values may only be returned from initializers with no argument.");
+			}
 			
 			if (!constructorContract.getModifiers().contains(Modifier.ABSTRACT)) {
 				printError(constructorContract, "Template parameter constructor declarations must be abstract methods !");
@@ -484,11 +502,21 @@ public class TemplateProcessor extends AbstractProcessor {
 				printError(constructorContract, "Template parameter constructor declarations cannot be generics");
 				continue;
 			}
-			List<MethodDeclaration> constructorContracts = paramConstructorContractsByParam.get(paramType);
-			if (constructorContracts == null) {
-				constructorContracts = new ArrayList<MethodDeclaration>();
-				paramConstructorContractsByParam.put(paramType, constructorContracts);
+			Pair<MethodDeclaration, List<MethodDeclaration>> pair = paramConstructorContractsByParam.get(paramType);
+			if (pair == null) {
+				pair = new Pair<MethodDeclaration, List<MethodDeclaration>>(null, new ArrayList<MethodDeclaration>());
+				paramConstructorContractsByParam.put(paramType, pair);
 			}
+			if (declAnn.returnNeutralValue()) {
+				if (pair.getFirst() != null) {
+					printError(constructorContract, "Duplicate neutral value getter for parameter " + paramType);
+					printError(pair.getFirst(), "Duplicate neutral value getter for parameter " + paramType);
+				} else {
+					pair.setFirst(constructorContract);
+				}
+				continue;
+			}
+			List<MethodDeclaration> constructorContracts = pair.getSecond(); 
 			
 			boolean hasDuplicates = false;
 			

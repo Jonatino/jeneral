@@ -4,7 +4,7 @@ import javax.swing.JTable;
 
 import com.ochafik.lang.jeneral.Array;
 import com.ochafik.lang.jeneral.Property;
-import com.ochafik.lang.jeneral.annotations.DeclareConstructor;
+import com.ochafik.lang.jeneral.annotations.Initializer;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.Template;
 
@@ -13,7 +13,7 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> 
 	@Property
 	final Array<T> array;
 	
-	@DeclareConstructor 
+	@Initializer 
 	protected abstract U new_U();
 	
 	public TArray(int length) {
