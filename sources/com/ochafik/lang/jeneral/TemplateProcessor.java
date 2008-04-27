@@ -105,9 +105,18 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (prop == null)
 					continue;
 				
+				if (field.getModifiers().contains(Modifier.PRIVATE)) {
+					printError(field, "Properties cannot be private.");
+				}
+					
 				properties.add(field);
-				if (prop.inConstructors())
-					propertiesToAddToConstructors.add(field);
+				
+				if (prop.inConstructors()) {
+					if (field.getModifiers().contains(Modifier.FINAL))
+						printError(field, "Cannot define a final field in any of this template's implementation constructors, as final fields must be initialized by a constructor of this class.");
+					else 
+						propertiesToAddToConstructors.add(field);
+				}
 			}
 			
 			qualifiedTemplateInterfaceNameWithGenericsUsage = classDeclaration.getQualifiedName() + genericParamsUsage;
