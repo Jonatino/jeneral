@@ -517,7 +517,12 @@ public class TemplateProcessor extends AbstractProcessor {
 				List<String> paramConstructorArgsTypes = new ArrayList<String>();
 				List<String> paramConstructorArgsNames = new ArrayList<String>();
 				for (ParameterDeclaration d : constructorContract.getParameters()) {
-					paramConstructorArgsTypes.add(d.getType() + ".class");
+					String type = d.getType().toString();
+					if (templateClassInfo.genericParamNames.contains(type)) {
+						paramConstructorArgsTypes.add(d.getType() + "()");
+					} else {
+						paramConstructorArgsTypes.add(d.getType() + ".class");
+					}
 					paramConstructorArgsNames.add(d.getSimpleName());
 				}
 
