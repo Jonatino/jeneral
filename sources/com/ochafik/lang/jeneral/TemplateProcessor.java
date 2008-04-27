@@ -111,7 +111,7 @@ public class TemplateProcessor extends AbstractProcessor {
 					
 				properties.add(field);
 				
-				if (prop.inConstructors()) {
+				if (prop.addToConstructors()) {
 					if (field.getModifiers().contains(Modifier.FINAL))
 						printError(field, "Cannot define a final field in any of this template's implementation constructors, as final fields must be initialized by a constructor of this class.");
 					else 

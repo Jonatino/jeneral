@@ -33,7 +33,7 @@ import com.ochafik.lang.jeneral.annotations.Template;
 public abstract class ElementsBuilder<U,V> implements ElementsBuilder_Template<U,V> {
 	 
 	// Generate getters and setters for the 'arg' property, and append it to all ElementBuilder's factory methods
-	@Property(inConstructors = true)
+	@Property(addToConstructors = true)
 	String arg;
 	
 	// Declare that T must have a constructor T(String) that throws no checked exception, and that it should be accessible as the method new_T :

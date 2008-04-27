@@ -24,7 +24,7 @@ import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 @TemplatesHelper
 public interface Array<T> {
 	public T get(int i);
-	public void set(int i, T value);
+	public T set(int i, T value);
 	public int length();
 	public Object getArray();
 }

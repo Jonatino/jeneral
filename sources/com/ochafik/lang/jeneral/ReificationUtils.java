@@ -28,8 +28,11 @@ public class ReificationUtils {
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final int[] array = new int[length];
-				public void set(int i, T value) { 
-					array[i] = ((Integer)value).intValue(); 
+				public T set(int i, T value) {
+					int pv = ((Integer)value).intValue();
+					Integer ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
@@ -42,8 +45,11 @@ public class ReificationUtils {
 		else if (c == Long.TYPE) {
 			return new Array<T>() {
 				final long[] array = new long[length];
-				public void set(int i, T value) { 
-					array[i] = ((Long)value).longValue(); 
+				public T set(int i, T value) { 
+					long pv = ((Long)value).longValue();
+					Long ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
@@ -56,8 +62,11 @@ public class ReificationUtils {
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final short[] array = new short[length];
-				public void set(int i, T value) { 
-					array[i] = ((Short)value).shortValue(); 
+				public T set(int i, T value) { 
+					short pv = ((Short)value).shortValue();
+					Short ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
@@ -70,8 +79,11 @@ public class ReificationUtils {
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final byte[] array = new byte[length];
-				public void set(int i, T value) { 
-					array[i] = ((Byte)value).byteValue(); 
+				public T set(int i, T value) { 
+					byte pv = ((Byte)value).byteValue();
+					Byte ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
@@ -84,8 +96,11 @@ public class ReificationUtils {
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final char[] array = new char[length];
-				public void set(int i, T value) { 
-					array[i] = ((Character)value).charValue(); 
+				public T set(int i, T value) { 
+					char pv = ((Character)value).charValue();
+					Character ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
@@ -98,8 +113,11 @@ public class ReificationUtils {
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final float[] array = new float[length];
-				public void set(int i, T value) { 
-					array[i] = ((Float)value).floatValue(); 
+				public T set(int i, T value) { 
+					float pv = ((Float)value).floatValue();
+					Float ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
@@ -112,8 +130,11 @@ public class ReificationUtils {
 		else if (c == Integer.TYPE) {
 			return new Array<T>() {
 				final double[] array = new double[length];
-				public void set(int i, T value) { 
-					array[i] = ((Double)value).doubleValue(); 
+				public T set(int i, T value) { 
+					double pv = ((Double)value).doubleValue();
+					Double ov = pv;
+					array[i] = pv; 
+					return (T)ov;
 				}
 				@SuppressWarnings("unchecked")
 				public T get(int i) { 
