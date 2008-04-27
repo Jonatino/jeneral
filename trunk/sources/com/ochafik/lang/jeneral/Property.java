@@ -20,5 +20,5 @@
 package com.ochafik.lang.jeneral;
 
 public @interface Property {
-	boolean inConstructors() default false;
+	boolean addToConstructors() default false;
 }

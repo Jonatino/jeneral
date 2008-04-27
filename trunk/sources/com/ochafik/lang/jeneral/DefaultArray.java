@@ -43,8 +43,9 @@ class DefaultArray<T> implements Array<T> {
 		return java.lang.reflect.Array.getLength(array);
 	}
 
-	public void set(int i, T value) {
+	public T set(int i, T value) {
 		java.lang.reflect.Array.set(array, i, value);
+		return value;
 	}
 
 }

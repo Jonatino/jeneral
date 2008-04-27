@@ -17,7 +17,7 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> 
 	protected abstract U new_U();
 	
 	public TArray(int length) {
-		array = T(length);
+		array = T(length); 
 		U u = new_U();
 		System.out.println(u);
 		/*try {
