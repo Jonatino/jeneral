@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.ochafik.lang.jeneral.AbstractProcessor.LinesFormatter;
 import com.ochafik.lang.jeneral.annotations.Initializer;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Template;
@@ -89,7 +90,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> paramConstructorContracts;
 		List<FieldDeclaration> properties;
 		List<FieldDeclaration> propertiesToAddToConstructors;
-		String qualifiedTemplateInterfaceNameWithGenericsUsage;
+		String qualifiedTemplateNameWithGenericsUsage;
 		
 		public TemplateInfo(ClassDeclaration classDeclaration) {
 			this.classDeclaration = classDeclaration;
@@ -127,20 +128,21 @@ public class TemplateProcessor extends AbstractProcessor {
 						propertiesToAddToConstructors.add(field);
 				}
 			}
-			
-			qualifiedTemplateInterfaceNameWithGenericsUsage = classDeclaration.getQualifiedName() + genericParamsUsage;
+			qualifiedTemplateNameWithGenericsUsage = classDeclaration.getQualifiedName() + genericParamsUsage;
 		}
 	};
 	
 	class ConstructorInfo {
-		ConstructorDeclaration constructorDeclaration;
-		List<String> originalCtorArgNames;
-		Set<String> existingArgumentNames;
-		Map<String, String> genericParamClassArgNames;
-		Map<String, String> propertiesInitArgNames;
-		String arraySizeArgName;
-		List<String> generatedConstructorArgumentsDeclarations;
-		List<String> generatedConstructorArguments;
+		final ConstructorDeclaration constructorDeclaration;
+		final List<String> originalCtorArgNames;
+		final Set<String> existingArgumentNames;
+		final Map<String, String> genericParamClassArgNames;
+		final Map<String, String> propertiesInitArgNames;
+		final String arraySizeArgName;
+		final List<String> generatedConstructorArgumentsDeclarations;
+		final List<String> generatedConstructorArguments;
+		final List<String> generatedFactoryArgumentsDeclarations;
+		final List<String> generatedFactoryArguments;
 		public ConstructorInfo(TemplateInfo templateClassInfo, ConstructorDeclaration constructorDeclaration) {
 			this.constructorDeclaration = constructorDeclaration;
 			originalCtorArgNames = getArgumentNames(constructorDeclaration, null);
@@ -156,13 +158,16 @@ public class TemplateProcessor extends AbstractProcessor {
 			arraySizeArgName = chooseUniqueName("arraySize", existingArgumentNames, false);
 			
 			// Create the list of arguments declarations
-			generatedConstructorArgumentsDeclarations = new ArrayList<String>();
-			generatedConstructorArguments = new ArrayList<String>();
+			generatedFactoryArgumentsDeclarations = new ArrayList<String>();
+			generatedFactoryArguments = new ArrayList<String>();
 			for (String genericParamName : templateClassInfo.genericParamNames) {
 				String name = genericParamClassArgNames.get(genericParamName);
-				generatedConstructorArgumentsDeclarations.add("final " + typedClass(genericParamName) + " " + name);
-				generatedConstructorArguments.add(name);
+				generatedFactoryArgumentsDeclarations.add("final " + typedClass(genericParamName) + " " + name);
+				generatedFactoryArguments.add(name);
 			}
+			
+			generatedConstructorArgumentsDeclarations = new ArrayList<String>();
+			generatedConstructorArguments = new ArrayList<String>();
 			for (Declaration d : union(constructorDeclaration.getParameters(), templateClassInfo.propertiesToAddToConstructors)) {
 				String type = getType(d);
 				if (type == null)
@@ -176,6 +181,8 @@ public class TemplateProcessor extends AbstractProcessor {
 				generatedConstructorArgumentsDeclarations.add("final " + type + " " + name);
 				generatedConstructorArguments.add(name);
 			}
+			generatedFactoryArgumentsDeclarations.addAll(generatedConstructorArgumentsDeclarations);
+			generatedFactoryArguments.addAll(generatedConstructorArguments);
 		}
 	}
 	static String getType(Declaration d) {
@@ -307,22 +314,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		checkTemplateClassGenericParametersMatchItsInterface(templateClassInfo);
 	}
 
-	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> constructorInfos) {
+	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> ctorInfos) {
 		f.println("/// Concrete implementation of " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
 		//f.println("@SuppressWarnings(\"unchecked\")");
-		f.println("private static final class " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsDefinition + " extends " + templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage + " {");
-		
+		f.println("private static abstract class " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsDefinition + " extends " + templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage + " {");
+	
 		Set<String> existingFields = new TreeSet<String>();
 		existingFields.addAll(templateInfo.genericParamNames);
-		Map<String, String> genericParamClassFieldNames = new TreeMap<String, String>();
 		
-		for (String genericParamName : templateInfo.genericParamNames) {
-			String fieldName = chooseUniqueName(decapitalize(genericParamName), existingFields, true);
-			genericParamClassFieldNames.put(genericParamName, fieldName);
-			f.println("private final " + typedClass(genericParamName) + " " + fieldName + ";");
-		}
-		
-		for (ConstructorInfo ctorInfo : constructorInfos) {
+		for (ConstructorInfo ctorInfo : ctorInfos) {
 			//String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
 			f.println(ctorInfo.constructorDeclaration.getDocComment());
 			f.printfn(
@@ -339,14 +339,37 @@ public class TemplateProcessor extends AbstractProcessor {
 				f.println("this." + propertyName + " = " + ctorInfo.propertiesInitArgNames.get(propertyName) + ";");
 			}
 			
-			for (String genericParamName : templateInfo.genericParamNames) {
-				f.println("this." + genericParamClassFieldNames.get(genericParamName) + " = " + ctorInfo.genericParamClassArgNames.get(genericParamName) + ";");
-			}
-			
 			f.println("}");
 			f.println();
 		}
 		
+		writeGettersAndSetters(f, templateInfo);
+		writeGenericParameterConstructingMethodsCode(f, templateInfo);
+		
+		
+		f.println("public " + TemplateClass.class.getName() + " getTemplateClass() {");
+		f.println("throw new " + UnsupportedOperationException.class.getName() + "();");
+		f.println("}");
+		
+		f.println("}");		
+	}
+	
+	private void writeGenericParamRelatedMethods(LinesFormatter f, TemplateInfo templateInfo, ConstructorInfo ctorInfo) {
+		// Generate methods T() (generic parameter class getter) and T(int) (array builder)
+		for (String genericParamName : templateInfo.genericParamNames) {
+			String argName = ctorInfo.genericParamClassArgNames.get(genericParamName);
+			f.println(array(
+				"public final " + typedClass(genericParamName) + " " + genericParamName + "() {",
+					"return " + argName + ";",
+				"}",
+				"public final " + Array.class.getName() + "<" + genericParamName + "> " + genericParamName + "(int arraySize) {",
+					"return " + ReificationUtils.class.getName() + ".newArray(" + argName + ", arraySize);",
+				"}"
+			));
+		}
+		
+	}
+	private void writeGettersAndSetters(LinesFormatter f, TemplateInfo templateInfo) {
 		// Implement properties getters and setters
 		for (FieldDeclaration field : templateInfo.properties) {
 			String capitalizedName = capitalize(field.getSimpleName());
@@ -367,34 +390,43 @@ public class TemplateProcessor extends AbstractProcessor {
 				f.println();
 			}
 		}
-		
-		writeGenericParameterConstructingMethodsCode(f, templateInfo);
-		
-		// Generate methods T() (generic parameter class getter) and T(int) (array builder)
-		for (String genericParamName : templateInfo.genericParamNames) {
-			f.println(array(
-				"public final " + typedClass(genericParamName) + " " + genericParamName + "() {",
-					"return " + genericParamClassFieldNames.get(genericParamName) + ";",
-				"}",
-				"public final " + Array.class.getName() + "<" + genericParamName + "> " + genericParamName + "(int arraySize) {",
-					"return " + ReificationUtils.class.getName() + ".newArray(this." + genericParamClassFieldNames.get(genericParamName) + ", arraySize);",
-				"}"
-			));
-		}
-		
-		f.println("public " + TemplateClass.class.getName() + " getTemplateClass() {");
-		f.println("throw new " + UnsupportedOperationException.class.getName() + "();");
-		f.println("}");
-		
-		f.println("}");		
 	}
-	
 	private void createFactoryClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> ctorInfos) {
 		f.println("/// Factory class for " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
 		f.println("@SuppressWarnings(\"unchecked\")");
 		f.println("public final static class " + GENERATED_FACTORY_NAME + " {");
 		
 		for (ConstructorInfo ctorInfo : ctorInfos) {
+			
+			String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
+			f.println(ctorInfo.constructorDeclaration.getDocComment());
+			
+			f.printfn(
+					"public static final %s %s newInstance(%s) %s {",
+					templateInfo.genericParamsDefinition,
+					qualifiedTemplateInterfaceNameWithGenericsUsage,
+					implode(ctorInfo.generatedFactoryArgumentsDeclarations), 
+					wrappedImplosion(ctorInfo.constructorDeclaration.getThrownTypes(), "throws ", "")); 
+			
+			String instanceName = chooseUniqueName("instance", ctorInfo.existingArgumentNames, false);
+			f.printfn("%s %s = new %s(%s) {",
+				templateInfo.qualifiedTemplateNameWithGenericsUsage,
+				instanceName,
+				GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage,
+				implode(ctorInfo.generatedConstructorArguments)
+			);
+			
+			writeGenericParamRelatedMethods(f, templateInfo, ctorInfo);
+			//createImplementationClassCode(f, templateInfo, ctorInfos, true, ctorInfo.genericParamClassArgNames);
+			
+			f.println("};");
+			f.println("return " + instanceName + ";");
+			f.println("}");
+		}
+		
+		createImplementationClassCode(f, templateInfo, ctorInfos);
+		
+		/*for (ConstructorInfo ctorInfo : ctorInfos) {
 			
 			String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
 			f.println(ctorInfo.constructorDeclaration.getDocComment());
@@ -409,8 +441,38 @@ public class TemplateProcessor extends AbstractProcessor {
 			f.println("return new " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage + "(" + implode(ctorInfo.generatedConstructorArguments) + ");");
 			f.println("}");
 		}
+		//createImplementationClassCode(f, templateInfo, ctorInfos, false, null);
+		*/
+		/*
+		for (ConstructorInfo ctorInfo : ctorInfos) {
+			
+			String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
+			f.println(ctorInfo.constructorDeclaration.getDocComment());
+			f.printfn(
+				"public static final %s %s newInstance(%s) %s {",
+				templateInfo.genericParamsDefinition,
+				qualifiedTemplateInterfaceNameWithGenericsUsage,
+				implode(ctorInfo.generatedConstructorArgumentsDeclarations), 
+				wrappedImplosion(ctorInfo.constructorDeclaration.getThrownTypes(), "throws ", "")); 
+					 
+			String instanceName = chooseUniqueName("instance", ctorInfo.existingArgumentNames, false);
+			f.printfn("%s %s = new %s(%s) {",
+				templateInfo.qualifiedTemplateNameWithGenericsUsage,
+				instanceName,
+				templateInfo.qualifiedTemplateNameWithGenericsUsage,
+				implode(ctorInfo.generatedConstructorArguments)
+			);
+			
+			createImplementationClassCode(f, templateInfo, ctorInfos, true, ctorInfo.genericParamClassArgNames);
+			
+			f.println("};");
+			
+			f.println("return new " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage + "(" + implode(ctorInfo.generatedConstructorArguments) + ");");
+			//f.println("return new " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage + "(" + implode(ctorInfo.generatedConstructorArguments) + ");");
+			f.println("}");
+		}*/
 		
-		createImplementationClassCode(f, templateInfo, ctorInfos);
+		
 		
 		f.println("}");		
 	}
