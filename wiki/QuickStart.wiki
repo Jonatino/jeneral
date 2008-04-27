@@ -66,7 +66,7 @@ Note that special replacements are done for the Jeneral class `com.ochafik.lang.
   * Given a variable `myArray` of type `array<T>` :
     * `myArray.get(i)` becomes `myArray[i]`
     * `myArray.set(i, value)` becomes `myArray[i] = value`
-	* `myArray.length()` becomes `myArray.length`
+    * `myArray.length()` becomes `myArray.length`
 
 {{{
 public class TArray_int {
