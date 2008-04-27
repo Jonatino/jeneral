@@ -36,8 +36,9 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import com.ochafik.lang.jeneral.AbstractProcessor.LinesFormatter;
-import com.ochafik.lang.jeneral.annotations.Initializer;
+import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
+import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.ochafik.util.CompoundCollection;
@@ -151,7 +152,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			propertiesInitArgNames = new TreeMap<String, String>();
 			
 			for (String genericParamName : templateClassInfo.genericParamNames)
-				genericParamClassArgNames.put(genericParamName, chooseUniqueName(decapitalize(genericParamName) + "Class", existingArgumentNames, true)); 
+				genericParamClassArgNames.put(genericParamName, chooseUniqueName(decapitalize(genericParamName), existingArgumentNames, true)); 
 			for (FieldDeclaration propertyDecl : templateClassInfo.propertiesToAddToConstructors)
 				propertiesInitArgNames.put(propertyDecl.getSimpleName(), chooseUniqueName(decapitalize(propertyDecl.getSimpleName()), existingArgumentNames, true));
 			
@@ -359,9 +360,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		for (String genericParamName : templateInfo.genericParamNames) {
 			String argName = ctorInfo.genericParamClassArgNames.get(genericParamName);
 			f.println(array(
-				"public final " + typedClass(genericParamName) + " " + genericParamName + "() {",
-					"return " + argName + ";",
-				"}",
+				"public final " + typedClass(genericParamName) + " " + genericParamName + "() { return " + argName + "; }",
 				"public final " + Array.class.getName() + "<" + genericParamName + "> " + genericParamName + "(int arraySize) {",
 					"return " + ReificationUtils.class.getName() + ".newArray(" + argName + ", arraySize);",
 				"}"
@@ -533,15 +532,15 @@ public class TemplateProcessor extends AbstractProcessor {
 					"return " + ReificationUtils.class.getName() + ".newInstance(" + paramName +"(), new Class[] {" + implode(paramConstructorArgsTypes) + "}, new Object[] {" + implode(paramConstructorArgsNames) + "});",
 					//"return (" + paramName +")" + paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
 					"} catch (" + SecurityException.class.getName() + " " + exName + ") {",
-					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot access to this constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
+					"	throw new " + TemplateContractViolationException.class.getName() + "(\"Cannot access to the constructor \" + " + paramName + "().getName() + \"(" + implode(paramConstructorArgsTypes) + ")\", " + exName + ");",
 					"} catch (" + IllegalAccessException.class.getName() + " " + exName + ") {",
-					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot invoke the constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
+					"	throw new " + TemplateContractViolationException.class.getName() + "(\"Cannot invoke the constructor \" + " + paramName + "().getName() + \"(" + implode(paramConstructorArgsTypes) + ") \", " + exName + ");",
 					"} catch (" + NoSuchMethodException.class.getName() + " " + exName + ") {",
-					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter class \" + " + paramName + "().getClass().getName() + \" does not have the expected constructor\", " + exName + ");",
+					"	throw new " + TemplateContractViolationException.class.getName() + "(\"The expected constructor \" + " + paramName + "().getName() + \"(" + implode(paramConstructorArgsTypes) + ") does not exist\", " + exName + ");",
 					"} catch (" + IllegalArgumentException.class.getName() + " " + exName + ") {",
 					"	throw new " + RuntimeException.class.getName() + "(\"Internal Jeneral exception\", " + exName + ");",
 					"} catch (" + InstantiationException.class.getName() + " " + exName + ") {",
-					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter class \" + " + paramName + "().getClass().getName() + \" is abstract and cannot be instantiated\", " + exName + ");",
+					"	throw new " + TemplateContractViolationException.class.getName() + "(\"Template parameter class \" + " + paramName + "().getName() + \" is abstract and cannot be instantiated\", " + exName + ");",
 					"} catch (" + InvocationTargetException.class.getName() + " " + exName + ") {",
 					"	" + Throwable.class.getName() + " " + innerEx + " = " + exName + ".getCause();",
 					"	" + typedClass("? extends " + Throwable.class.getName()) + " " + innerExClass + " = " + innerEx + ".getClass();"
@@ -551,7 +550,7 @@ public class TemplateProcessor extends AbstractProcessor {
 					f.println("if (" + expectedException + ".class.isAssignableFrom(" + innerExClass + ")) throw (" + expectedException + ")" + innerEx + ";");
 				
 				f.println(array(
-					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Template parameter constructor throwed a undeclared checked exception of type \" + " + innerEx + ".getClass().getName(), " + innerEx + ");",
+					"	throw new " + TemplateContractViolationException.class.getName() + "(\"Template parameter constructor \" + " + paramName + "().getName() + \"(" + implode(paramConstructorArgsTypes) + ") threw a undeclared checked exception of type \" + " + innerEx + ".getClass().getName(), " + innerEx + ");",
 					"}"
 				));
 				
@@ -567,7 +566,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> getGenericParamConstructorsContracts(ClassDeclaration decl, List<String> genericParamNames) {
 		Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> paramConstructorContractsByParam = new HashMap<String, Pair<MethodDeclaration,List<MethodDeclaration>>>();
 		for (MethodDeclaration constructorContract : decl.getMethods()) {
-			Initializer declAnn = constructorContract.getAnnotation(Initializer.class);
+			ParamConstructor declAnn = constructorContract.getAnnotation(ParamConstructor.class);
 			if (declAnn == null)
 				continue;
 			
