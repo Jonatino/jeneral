@@ -19,6 +19,7 @@
 */
 package com.ochafik.lang.jeneral;
 
-public @interface Property {
-	boolean addToConstructors() default false;
+public class TemplateContractViolationException extends RuntimeException {
+	public TemplateContractViolationException(String s) { super(s); }
+	public TemplateContractViolationException(String s, Throwable cause) { super(s, cause); }
 }
