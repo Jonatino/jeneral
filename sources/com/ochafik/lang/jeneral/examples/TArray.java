@@ -6,6 +6,7 @@ import javax.swing.JTable;
 
 import com.ochafik.lang.jeneral.Array;
 import com.ochafik.lang.jeneral.TemplateContractViolationException;
+import com.ochafik.lang.jeneral.annotations.InlineVelocity;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.Property;
@@ -13,14 +14,27 @@ import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
 public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray_Template<T, U, V, W> {
+	/**
+	 * This is sick
+	 */
 	@Property
 	final Array<T> array;
+	
+	/**
+	 * int i() { return 0; }
+	 * void processConstants() { return; }
+	 */
+	@InlineVelocity
+	Glass  glass;
 	
 	@ParamConstructor(returnNeutralValue = true)
 	protected abstract U new_U_neutral();
 	
 	@ParamConstructor
 	protected abstract U new_U();
+	 
+	@ParamConstructor
+	protected abstract U new_U(int e);
 	
 	@interface TypeContract { String name() default ""; }
 	@interface IsPrimitive {}
@@ -36,6 +50,9 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray
 			T T(int i);
 			T T() throws IOException;
 		}
+		
+		Glass getGlass();
+		
 		@OptionalContractClause("minMax")
 		interface Fields<T> {
 			T MAX_VALUE();
@@ -54,6 +71,9 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray
 		@ConstructorsContract // runtime annotation, to allow names mangling
 		ValueType.Constructors<T> getConstructors();
 		
+		class Glass {
+			
+		}
 		class Contract {
 			static <T> ValueType<T> getContract(Class<T> c, String... neededOptionalClauses) {
 				return null;
@@ -63,6 +83,8 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray
 	
 	public TArray(int length) {
 		array = T(length);
+		getArray();
+		System.out.println("glass : " +glass.i()); 
 		System.out.println("new_U() -> " + new_U());
 		System.out.println("new_U_neutral() -> " + new_U_neutral());
 		/*try {
@@ -120,7 +142,7 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray
       abstract T empty_T();
 
 	public void set(int i, T value) {
-		array.set(i, value);
+ 		array.set(i, value);
 	}
 	public boolean accept(T e) {
 		return false;
