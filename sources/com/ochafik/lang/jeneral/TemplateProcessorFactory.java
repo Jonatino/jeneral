@@ -59,6 +59,7 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 		});
 	}
 
+	@SuppressWarnings("unchecked")
 	public Collection<String> supportedOptions() {
 		return Collections.EMPTY_LIST;
 	}

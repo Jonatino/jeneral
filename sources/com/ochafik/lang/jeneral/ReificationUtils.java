@@ -19,8 +19,6 @@
 */
 package com.ochafik.lang.jeneral;
 
-import static com.ochafik.util.string.StringUtils.implode;
-
 import java.lang.reflect.InvocationTargetException;
 
 public class ReificationUtils {
@@ -47,6 +45,7 @@ public class ReificationUtils {
 		throw new UnsupportedOperationException();
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static <T> T newInstance(Class<T> c, Class<?>[] argTypes, Object[] args) throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		if (!c.isPrimitive())
 			return (T)c.getConstructor(argTypes).newInstance(args);

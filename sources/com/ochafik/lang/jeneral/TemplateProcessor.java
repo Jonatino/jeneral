@@ -25,6 +25,8 @@ import static com.ochafik.util.string.StringUtils.implode;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +39,7 @@ import com.ochafik.lang.jeneral.annotations.Initializer;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
+import com.ochafik.util.CompoundCollection;
 import com.ochafik.util.listenable.Pair;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.declaration.AnnotationMirror;
@@ -160,22 +163,33 @@ public class TemplateProcessor extends AbstractProcessor {
 				generatedConstructorArgumentsDeclarations.add("final " + typedClass(genericParamName) + " " + name);
 				generatedConstructorArguments.add(name);
 			}
-			for (ParameterDeclaration d : constructorDeclaration.getParameters()) {
+			for (Declaration d : union(constructorDeclaration.getParameters(), templateClassInfo.propertiesToAddToConstructors)) {
+				String type = getType(d);
+				if (type == null)
+					continue;
+				
 				String name = d.getSimpleName();
-				generatedConstructorArgumentsDeclarations.add(d.toString());
-				TypeDeclaration t = environment.getTypeDeclaration(d.getType().toString());
-				generatedConstructorArgumentsDeclarations.add("final " + t.getQualifiedName() + " " + name);
-				generatedConstructorArguments.add(name);
-			}
-			for (FieldDeclaration propertyDecl : templateClassInfo.propertiesToAddToConstructors) {
-				String name = propertiesInitArgNames.get(propertyDecl.getSimpleName());
-				TypeDeclaration t = environment.getTypeDeclaration(propertyDecl.getType().toString());
-				generatedConstructorArgumentsDeclarations.add("final " + t.getQualifiedName() + " " + name);
+				try {
+					TypeDeclaration t = environment.getTypeDeclaration(type);
+					type = t.getQualifiedName();
+				} catch (Exception ex) {}
+				generatedConstructorArgumentsDeclarations.add("final " + type + " " + name);
 				generatedConstructorArguments.add(name);
 			}
 		}
 	}
-	
+	static String getType(Declaration d) {
+		if (d instanceof ParameterDeclaration) {
+			return ((ParameterDeclaration)d).getType().toString();
+		}
+		if (d instanceof FieldDeclaration) {
+			return ((FieldDeclaration)d).getType().toString();
+		}
+		return null;
+	}
+	static <E> Collection<? extends E> union(Collection<? extends E>... cols) {
+		return new CompoundCollection<E>(Arrays.asList(cols));
+	}
 	static String computeInstanceName(String baseName, TypeDeclaration... types) {
 		StringBuilder b = new StringBuilder(baseName);
 		for (TypeDeclaration type : types) {
@@ -196,7 +210,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			try {
 				processTemplateClass(decl);
 			} catch (Throwable t) {
-				logError(t);
+				logError(dec, t);
 			}
 		}
 		
@@ -205,7 +219,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			try {
 				processInstantiation(dec);
 			} catch (Throwable t) {
-				logError(t);
+				logError(dec, t);
 			}
 		}
 	}
@@ -427,7 +441,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				f.println(neutralValueDeclaration.getDocComment());
 				f.println("@SuppressWarnings(\"unchecked\")");
 				f.println("public " + paramName + " " + neutralValueDeclaration.getSimpleName() + "() {");
-				f.println("return " + ReificationUtils.class.getName() + ".getNeutralValue(" + paramName + ");");
+				f.println("return " + ReificationUtils.class.getName() + ".getNeutralValue(" + paramName + "());");
 				//f.println("return " + paramName + "().isPrimitive() ? (" + paramName + ")0 : null;");
 				f.println("}");
 			}
