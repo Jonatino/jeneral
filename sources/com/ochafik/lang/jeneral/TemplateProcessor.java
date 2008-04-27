@@ -441,7 +441,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				
 				f.println(array(
 					"try {",
-					"return " + ReificationUtils.class.getName() + ".newInstance(" + paramName +", new Class[] {" + implode(paramConstructorArgsTypes) + "}, new Object[] {" + implode(paramConstructorArgsNames) + "});",
+					"return " + ReificationUtils.class.getName() + ".newInstance(" + paramName +"(), new Class[] {" + implode(paramConstructorArgsTypes) + "}, new Object[] {" + implode(paramConstructorArgsNames) + "});",
 					//"return (" + paramName +")" + paramName + "().getConstructor(" + implode(paramConstructorArgsTypes) + ").newInstance(" + implode(paramConstructorArgsNames)+");",
 					"} catch (" + SecurityException.class.getName() + " " + exName + ") {",
 					"	throw new " + ViolatedTemplateConstraintException.class.getName() + "(\"Cannot access to this constructor of template parameter class \" + " + paramName + "().getClass().getName(), " + exName + ");",
