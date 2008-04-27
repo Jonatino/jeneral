@@ -27,4 +27,5 @@ public interface Array<T> {
 	public T set(int i, T value);
 	public int length();
 	public Object getArray();
+	//public void sort(int ...); Arrays.sort(...);
 }

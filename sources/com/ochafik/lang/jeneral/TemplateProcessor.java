@@ -231,7 +231,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			"//",
 			templateClassInfo.packageName.length() == 0 ? null : "package " + templateClassInfo.packageName + ";",
 			"",
-			"interface " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsDefinition + " {",
+			"interface " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsDefinition + " extends " + TemplateInstance.class.getName() + " {",
 			""
 		));
 		
@@ -358,6 +358,10 @@ public class TemplateProcessor extends AbstractProcessor {
 				"}"
 			));
 		}
+		
+		f.println("public " + TemplateClass.class.getName() + " getTemplateClass() {");
+		f.println("throw new " + UnsupportedOperationException.class.getName() + "();");
+		f.println("}");
 		
 		f.println("}");		
 	}
