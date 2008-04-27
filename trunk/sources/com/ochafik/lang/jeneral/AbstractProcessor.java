@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -75,9 +76,13 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 	protected void printError(SourcePosition position, String string) {
 		environment.getMessager().printError(position, string);
 	}
-	protected void logError(Throwable t) {
-		t.printStackTrace(getLogger());
-		getLogger().flush();
+	protected void logError(Declaration d, Throwable t) {
+		StringWriter sout = new StringWriter();
+		PrintWriter p = new PrintWriter(sout);
+		t.printStackTrace(p);
+		printError(d, sout.toString());
+		//t.printStackTrace(getLogger());
+		//getLogger().flush();
 	}
 	protected void log(Object o) {
 		getLogger().println(o);
