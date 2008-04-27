@@ -129,7 +129,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 	};
 	
-	static class ConstructorInfo {
+	class ConstructorInfo {
 		ConstructorDeclaration constructorDeclaration;
 		List<String> originalCtorArgNames;
 		Set<String> existingArgumentNames;
@@ -161,12 +161,16 @@ public class TemplateProcessor extends AbstractProcessor {
 				generatedConstructorArguments.add(name);
 			}
 			for (ParameterDeclaration d : constructorDeclaration.getParameters()) {
+				String name = d.getSimpleName();
 				generatedConstructorArgumentsDeclarations.add(d.toString());
-				generatedConstructorArguments.add(d.getSimpleName());
+				TypeDeclaration t = environment.getTypeDeclaration(d.getType().toString());
+				generatedConstructorArgumentsDeclarations.add("final " + t.getQualifiedName() + " " + name);
+				generatedConstructorArguments.add(name);
 			}
 			for (FieldDeclaration propertyDecl : templateClassInfo.propertiesToAddToConstructors) {
 				String name = propertiesInitArgNames.get(propertyDecl.getSimpleName());
-				generatedConstructorArgumentsDeclarations.add("final " + propertyDecl.getType() + " " + name);
+				TypeDeclaration t = environment.getTypeDeclaration(propertyDecl.getType().toString());
+				generatedConstructorArgumentsDeclarations.add("final " + t.getQualifiedName() + " " + name);
 				generatedConstructorArguments.add(name);
 			}
 		}
