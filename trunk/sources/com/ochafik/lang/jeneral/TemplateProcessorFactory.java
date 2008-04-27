@@ -27,6 +27,7 @@ import java.util.Set;
 import com.ochafik.lang.jeneral.Templates.TemplatesPrimitive;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Param;
+import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.sun.mirror.apt.AnnotationProcessor;
