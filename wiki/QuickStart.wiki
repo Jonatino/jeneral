@@ -34,7 +34,7 @@ public abstract class TArray<T> implements TArray_Template<T> { // TArray_Templa
 		return array.get(pos); 
 	}
 	public void set(int pos, T value) { 
-		array.get(pos, value); 
+		array.set(pos, value); 
 	}
 	public int size() { 
 		return array.length(); 
