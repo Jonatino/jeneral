@@ -20,7 +20,6 @@
 package com.ochafik.lang.jeneral;
 
 import static com.ochafik.util.string.StringUtils.implode;
-import static java.lang.String.format;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -32,23 +31,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
-import com.ochafik.lang.jeneral.annotations.Instantiate;
-import com.ochafik.lang.jeneral.annotations.Template;
-import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.ochafik.util.listenable.AdaptedCollection;
 import com.ochafik.util.listenable.Adapter;
 import com.sun.mirror.apt.AnnotationProcessor;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
-import com.sun.mirror.apt.Filer;
 import com.sun.mirror.declaration.AnnotationMirror;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
 import com.sun.mirror.declaration.AnnotationTypeElementDeclaration;
 import com.sun.mirror.declaration.AnnotationValue;
 import com.sun.mirror.declaration.ClassDeclaration;
-import com.sun.mirror.declaration.ConstructorDeclaration;
 import com.sun.mirror.declaration.Declaration;
+import com.sun.mirror.declaration.ExecutableDeclaration;
 import com.sun.mirror.declaration.Modifier;
 import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.declaration.TypeDeclaration;
@@ -112,13 +108,34 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		return null;
 	}
 	
-	protected Collection<String> getFormalTypeNames(TypeDeclaration type) {
+	public static List<String> getArgumentNames(ExecutableDeclaration constructor, List<String> existingNames) {
+		if (existingNames == null)
+			existingNames = new ArrayList<String>();
+		
+		for (ParameterDeclaration d : constructor.getParameters())
+			existingNames.add(d.getSimpleName());
+		
+		return existingNames;
+	}
+	public static String typedClass(String genericParamName) {
+		return Class.class.getName() + "<" + genericParamName + ">";
+	}
+	protected static Collection<String> getFormalTypeNames(TypeDeclaration type) {
 		return new AdaptedCollection<TypeParameterDeclaration, String>(type.getFormalTypeParameters(),
 		new Adapter<TypeParameterDeclaration, String>() { public String adapt(TypeParameterDeclaration value) {
 			return value.getSimpleName();
 		}}, null);
 	}
 	
+	public static <U, V> String adaptedImplosion(Collection<U> col, Adapter<U, V> adapter) {
+		return implode(new AdaptedCollection<U, V>(col, adapter));
+	}
+	public static <E> String wrappedImplosion(Collection<E> col, String prefixIfResultNotEmpty, String suffixIfResultNotEmpty) {
+		String s = implode(col);
+		if (s.length() > 0)
+			return prefixIfResultNotEmpty + s + suffixIfResultNotEmpty;
+		return "";
+	}
 	public static boolean implementsInterface(ClassDeclaration decl, String interfaceQualifiedName) {
 		for (InterfaceType interf : decl.getSuperinterfaces()) {
 			if (interf.getDeclaration().getQualifiedName().equals(interfaceQualifiedName))
@@ -131,6 +148,23 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		if (chars.length > 0)
 			chars[0] = Character.toUpperCase(chars[0]);
 		return new String(chars);
+	}
+
+	public static String decapitalize(String name) {
+		char[] chars = name.toCharArray();
+		if (chars.length > 0)
+			chars[0] = Character.toLowerCase(chars[0]);
+		return new String(chars);
+	}
+
+	public static String chooseUniqueName(String name, Set<String> existingArgumentNames, boolean addChosenNameToExistingNames) {
+		int i = 2;
+		while (existingArgumentNames.contains(name)) 
+			name = name + (i++);
+		
+		if (addChosenNameToExistingNames)
+			existingArgumentNames.add(name);
+		return name;
 	}
 
 	protected class LinesFormatter {
@@ -194,7 +228,7 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		}
 	}
 	
-	protected static List<String> collectGenericParamsArgumentsDeclaration(Collection<String> typeNames, boolean finalDecls, boolean argNameOnly, List<String> typeAndArgNameOut) {
+	/*protected static List<String> collectGenericParamsArgumentsDeclaration(Collection<String> typeNames, boolean finalDecls, boolean argNameOnly, List<String> typeAndArgNameOut) {
 		if (typeAndArgNameOut == null)
 			typeAndArgNameOut = new ArrayList<String>();
 		
@@ -206,16 +240,14 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 				typeAndArgNameOut.add((finalDecls ? "final " : "") + Class.class.getName() + "<" + type + "> " + argName);
 		}
 		return typeAndArgNameOut;
-	}
+	}*/
 	
 	protected static String chooseVariableName(String typeName) {
 		String[] words = typeName.toString().split(".");
 		return chooseVariableNameFromSimpleName(words.length > 0 ? words[words.length - 1] : typeName);
 	}
 	protected static String chooseVariableNameFromSimpleName(String simpleName) {
-		char[] cs = simpleName.toCharArray();
-		if (cs.length > 0) cs[0] = Character.toLowerCase(cs[0]);
-		String name = new String(cs);
+		String name = decapitalize(simpleName);
 		if (name.equals(simpleName))
 			name = "_" + name;
 		return name;

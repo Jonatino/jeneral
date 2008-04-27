@@ -35,5 +35,6 @@ public @interface Template {
 	/// Reifiable templates have a "Factory" inner class which various newInstance methods allow for pure-generics instantiation of the template.
 	boolean reifiable() default true;
 	
-	//boolean paramFactoryThrowsExceptions() default false;
+	/// If true, any template class referenced within the template class will be instantiated if its generic parameters contain one of the template's parameters 
+	boolean cascadesInstantiations() default true;
 }

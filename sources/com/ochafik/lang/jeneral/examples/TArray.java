@@ -3,14 +3,17 @@ package com.ochafik.lang.jeneral.examples;
 import javax.swing.JTable;
 
 import com.ochafik.lang.jeneral.Array;
+import com.ochafik.lang.jeneral.Property;
+import com.ochafik.lang.jeneral.annotations.DeclareConstructor;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
-public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, U, W> {
+public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, V, W> {
+	@Property
 	final Array<T> array;
-	//final JTable[] tables;
 	
+	@DeclareConstructor 
 	protected abstract U new_U();
 	
 	public TArray(int length) {
@@ -23,7 +26,7 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, U, W> 
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		}*/
+		} */
 	}
 	public TArray(U u, V v, W w) {
 		array = T(10);
@@ -39,7 +42,7 @@ public abstract class TArray<T, U, V, W> implements TArray_Template<T, U, U, W> 
 			System.out.println(table);
 		}*/
 	}
-	
+	 
 	static class MyTable extends JTable {
 		
 	}
