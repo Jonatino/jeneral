@@ -49,6 +49,7 @@ import com.sun.mirror.declaration.MethodDeclaration;
 import com.sun.mirror.declaration.Modifier;
 import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.declaration.TypeDeclaration;
+import com.sun.mirror.declaration.TypeParameterDeclaration;
 import com.sun.mirror.type.InterfaceType;
 import com.sun.mirror.type.ReferenceType;
 import com.sun.mirror.type.TypeMirror;
@@ -93,7 +94,11 @@ public class TemplateProcessor extends AbstractProcessor {
 			templateInterfaceName = classDeclaration.getSimpleName() + GENERATED_INTERFACE_SUFFIX;
 			
 			packageName = classDeclaration.getPackage().getQualifiedName();
-			genericParamsDefinition = wrappedImplosion(classDeclaration.getFormalTypeParameters(), "<", ">");
+			List<String> genDefs = new ArrayList<String>();
+			for (TypeParameterDeclaration d : classDeclaration.getFormalTypeParameters()) {
+				genDefs.add(d.getSimpleName() + wrappedImplosion(d.getBounds(), " extends ", ""));
+			}
+			genericParamsDefinition = wrappedImplosion(genDefs, "<", ">");
 			
 			genericParamNames = new ArrayList<String>(getFormalTypeNames(classDeclaration));
 			genericParamsUsage = wrappedImplosion(genericParamNames, "<", ">");
