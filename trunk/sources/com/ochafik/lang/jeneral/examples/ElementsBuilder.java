@@ -24,7 +24,7 @@ import java.io.IOException;
 import javax.swing.JLabel;
 
 import com.ochafik.lang.jeneral.Property;
-import com.ochafik.lang.jeneral.annotations.DeclareConstructor;
+import com.ochafik.lang.jeneral.annotations.Initializer;
 import com.ochafik.lang.jeneral.annotations.Template;
 
 // Declare that ElementsBuild is a template.
@@ -37,7 +37,7 @@ public abstract class ElementsBuilder<U,V> implements ElementsBuilder_Template<U
 	String arg;
 	
 	// Declare that T must have a constructor T(String) that throws no checked exception, and that it should be accessible as the method new_T :
-	@DeclareConstructor
+	@Initializer
 	public abstract U new_T(String arg) throws IOException;
 	
 	public U buildElement() throws IOException {
