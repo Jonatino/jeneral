@@ -19,6 +19,7 @@
 */
 package com.ochafik.lang.jeneral.annotations;
 
-public @interface DeclareConstructor {
-
+public @interface ParamConstructor {
+	/// Neutral value is zero for primitive types and null for non-primitive types
+	boolean returnNeutralValue() default false;
 }
