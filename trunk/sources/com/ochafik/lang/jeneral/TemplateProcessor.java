@@ -28,6 +28,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
@@ -59,6 +61,7 @@ import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.ochafik.util.CompoundCollection;
 import com.ochafik.util.listenable.Pair;
+import com.ochafik.util.string.RegexUtils;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.declaration.AnnotationMirror;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
@@ -81,9 +84,9 @@ cd /Users/ochafik/Prog/Java && rm templates_logs.txt >/dev/null ; apt -factory c
  */
 public class TemplateProcessor extends AbstractProcessor {
 	private static final String 
-		GENERATED_INTERFACE_SUFFIX = "_Template",
-		GENERATED_FACTORY_NAME = "Factory",
-		GENERATED_IMPLEMENTATION_NAME = "Reification";
+		//GENERATED_INTERFACE _SUFFIX = "_Template",
+		GENERATED_FACTORY_NAME = "template",
+		GENERATED_IMPLEMENTATION_NAME = "_";
 		
 	private Class<?>[] deps = array(
 		ReificationUtils.class,
@@ -149,8 +152,11 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		public TemplateInfo(ClassDeclaration classDeclaration) {
 			this.classDeclaration = classDeclaration;
-			templateInterfaceQualifiedName = classDeclaration.getQualifiedName() + GENERATED_INTERFACE_SUFFIX;
-			templateInterfaceName = classDeclaration.getSimpleName() + GENERATED_INTERFACE_SUFFIX;
+			//templateInterfaceQualifiedName = classDeclaration.getQualifiedName() + GENERATED_INTERFACE_SUFFIX;
+			//templateInterfaceName = classDeclaration.getSimpleName() + GENERATED_INTERFACE_SUFFIX;
+			
+			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^(.*\\.)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}_{2}"));
+			templateInterfaceName = "_" + classDeclaration.getSimpleName() + "_";
 			
 			packageName = classDeclaration.getPackage().getQualifiedName();
 			List<String> genDefs = new ArrayList<String>();
@@ -388,7 +394,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			"//",
 			templateClassInfo.packageName.length() == 0 ? null : "package " + templateClassInfo.packageName + ";",
 			"",
-			"interface " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsDefinition + " extends " + TemplateInstance.class.getName() + " {",
+			"private interface " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsDefinition + " extends " + TemplateInstance.class.getName() + " {",
 			""
 		));
 		
