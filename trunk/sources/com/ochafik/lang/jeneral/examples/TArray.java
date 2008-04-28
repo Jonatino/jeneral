@@ -14,7 +14,7 @@ import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
 public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArray_<T, U, V, W> {
-	/**
+	/** 
 	 * This is sick
 	 */
 	@Property
@@ -164,7 +164,7 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArra
 		TArray<Integer, Integer, Integer, Integer> intArray= TArray.template.newInstance(Integer.TYPE, Integer.class, Integer.TYPE, Integer.TYPE, length);
 		intArray.set(2, 3);
 		intArray.list();
-		
+				
 		TArray<Integer, Integer, Integer, Integer> intArray2  = TArray.template.newInstance(Integer.TYPE, Integer.class, Integer.TYPE, Integer.TYPE, length);
 	}
 }
