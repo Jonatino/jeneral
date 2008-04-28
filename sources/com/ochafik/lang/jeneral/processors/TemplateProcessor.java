@@ -58,6 +58,7 @@ import com.ochafik.lang.jeneral.ReificationUtils;
 import com.ochafik.lang.jeneral.TemplateClass;
 import com.ochafik.lang.jeneral.TemplateContractViolationException;
 import com.ochafik.lang.jeneral.TemplateInstance;
+import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.InlineVelocity;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
@@ -174,8 +175,8 @@ public class TemplateProcessor extends AbstractProcessor {
 			//templateInterfaceQualifiedName = classDeclaration.getQualifiedName() + GENERATED_INTERFACE_SUFFIX;
 			//templateInterfaceName = classDeclaration.getSimpleName() + GENERATED_INTERFACE_SUFFIX;
 			
-			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^((?:.*\\.)?)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}{2}_"));
-			templateInterfaceName = classDeclaration.getSimpleName() + "_";
+			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^((?:.*\\.)?)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}_{2}"));
+			templateInterfaceName = "_" + classDeclaration.getSimpleName();
 			implemClassName = classDeclaration.getSimpleName() + "Impl";
 			
 			packageName = classDeclaration.getPackage().getQualifiedName();
@@ -334,15 +335,15 @@ public class TemplateProcessor extends AbstractProcessor {
 				logError(dec, t);
 			}
 		}
-		/*
-		AnnotationTypeDeclaration veloAnno = getAnnotationType(InlineVelocity.class);
-		for (Declaration dec : environment.getDeclarationsAnnotatedWith(veloAnno)) {
+		
+		AnnotationTypeDeclaration includeAnno = getAnnotationType(Include.class);
+		for (Declaration dec : environment.getDeclarationsAnnotatedWith(includeAnno)) {
 			try {
-				processInlineVelocity(dec);
+				processInclude(dec);
 			} catch (Throwable t) {
 				logError(dec, t);
 			}
-		}*/
+		}
 		
 		AnnotationTypeDeclaration instantiationAnno = getAnnotationType(Instantiate.class);
 		for (Declaration dec : environment.getDeclarationsAnnotatedWith(instantiationAnno)) {
@@ -354,6 +355,9 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 	}
 	
+	private void processInclude(Declaration dec) {
+		
+	}
 	void printVeloHelp(Declaration dec) {
 		printError(dec, "Inline velocity annotation has to be set on an uninitialized final field with a non-existing type name (such as 'final MyVelocityMethods methods;'");
 	}
@@ -566,6 +570,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> ctorInfos) {
+		f.println();
 		f.println("/// Concrete implementation of " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
 		//f.println("@SuppressWarnings(\"unchecked\")");
 		f.println("private static " + (templateInfo.genericParamNames.isEmpty() ? "" : "abstract ") +"class " + templateInfo.implemClassName + templateInfo.genericParamsDefinition + " extends " + templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage + " {");
@@ -609,7 +614,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		for (String genericParamName : templateInfo.genericParamNames)
 			callsToTemplateClassMethods.add(genericParamName + "()");
 
-		f.println("return new template(" + implode(callsToTemplateClassMethods) + ");");
+		f.println("return new " + GENERATED_FACTORY_NAME + "(" + implode(callsToTemplateClassMethods) + ");");
 		f.println("}");
 		
 		f.println("}");		
@@ -657,7 +662,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		f.println(array(
 				"",
-				"private " + GENERATED_FACTORY_NAME + "(Class<?>... genericTypes) { super(genericTypes); }",
+				"protected " + GENERATED_FACTORY_NAME + "(Class<?>... genericTypes) { super(genericTypes); }",
 				""
 		));
 		for (ConstructorInfo ctorInfo : ctorInfos) {
@@ -752,14 +757,18 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void checkTemplateClassGenericParametersMatchItsInterface(TemplateInfo templateClassInfo) {
 
 		String fullTemplateInterfaceImplementsReference = (templateClassInfo.templateInterfaceQualifiedName + templateClassInfo.genericParamsUsage).replaceAll("\\s+", "");
+		boolean found = false;
 		for (InterfaceType inter : templateClassInfo.classDeclaration.getSuperinterfaces()) {
 			TypeMirror erased = environment.getTypeUtils().getErasure(inter);
 			if (erased.toString().equals(templateClassInfo.templateInterfaceQualifiedName)) {
 				if (!inter.toString().replaceAll("\\s+", "").equals(fullTemplateInterfaceImplementsReference)) {
-					printError(templateClassInfo.classDeclaration, "Template class " + templateClassInfo.classDeclaration.getSimpleName() + templateClassInfo.genericParamsDefinition + " must implement its template interface with the same parameters. Expecting " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsUsage);
+					printError(templateClassInfo.classDeclaration, "Template class " + templateClassInfo.classDeclaration.getSimpleName() + templateClassInfo.genericParamsDefinition + " must implement its template interface with the same parameters. Expecting 'implements " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsUsage+"'");
 				}
+				found = true;
 			}
 		}
+		if (!found)
+			printWarning(templateClassInfo.classDeclaration, "Template class " + templateClassInfo.classDeclaration.getSimpleName() + templateClassInfo.genericParamsDefinition + " must implement its template interface with the same parameters. Expecting 'implements " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsUsage+"'");
 	}
 	
 	/**

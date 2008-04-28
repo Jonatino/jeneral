@@ -1,21 +1,16 @@
 package com.ochafik.lang.jeneral.processors;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.ochafik.io.ReadText;
-import com.ochafik.lang.jeneral.SmallJavaParser.Token;
 import com.ochafik.lang.jeneral.examples.ElementsBuilder;
-import com.ochafik.lang.jeneral.examples.TArray;
 import com.ochafik.util.string.RegexUtils;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
-import com.sun.mirror.declaration.ClassDeclaration;
 
 public class Instantiator {
 	public Instantiator(AnnotationProcessorEnvironment env, TemplateProcessor.TemplateInfo templateInfo, TemplateProcessor.ConstructorInfo ctorInfos) {
