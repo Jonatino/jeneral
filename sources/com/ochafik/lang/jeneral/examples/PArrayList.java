@@ -572,7 +572,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
             return true;
         } else if (other instanceof PArrayList) {
             PArrayList<E> that = (PArrayList<E>)other;
-            if (!getTemplateClass().equals(that.getTemplateClass()))
+            if (!getTemplate().equals(that.getClass()))
             	return false;
             
             if (that.size() != this.size()) {
