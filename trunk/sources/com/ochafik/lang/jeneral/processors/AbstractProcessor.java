@@ -70,11 +70,17 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 	protected void printNotice(SourcePosition position, String string) {
 		environment.getMessager().printNotice(position, string);
 	}
+	protected void printWarning(Declaration decl, String string) {
+		printWarning(decl.getPosition(), string);
+	}
 	protected void printError(Declaration decl, String string) {
 		printError(decl.getPosition(), string);
 	}
 	protected void printError(SourcePosition position, String string) {
 		environment.getMessager().printError(position, string);
+	}
+	protected void printWarning(SourcePosition position, String string) {
+		environment.getMessager().printWarning(position, string);
 	}
 	protected void logError(Declaration d, Throwable t) {
 		StringWriter sout = new StringWriter();
