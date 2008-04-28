@@ -44,7 +44,7 @@ import com.ochafik.lang.jeneral.annotations.Template;
  * @author Rob Eden
  */
 @Template
-public abstract class PArrayList<E extends Comparable<E>> implements Externalizable, Cloneable, _PArrayList_<E> {
+public abstract class PArrayList<E extends Comparable<E>> implements Externalizable, Cloneable, PArrayList_<E> {
 	static final long serialVersionUID = 1L;
 	
 	@ParamConstructor(returnNeutralValue = true)
