@@ -13,7 +13,7 @@ import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
-public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArray_<T, U, V, W> {
+public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArray<T, U, V, W> {
 	/** 
 	 * This is sick
 	 */
