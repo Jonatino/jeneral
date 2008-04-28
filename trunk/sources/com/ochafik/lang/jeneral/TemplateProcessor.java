@@ -54,11 +54,13 @@ import com.ochafik.admin.velocity.RuntimeTool;
 import com.ochafik.io.ReadText;
 import com.ochafik.lang.jeneral.AbstractProcessor.LinesFormatter;
 import com.ochafik.lang.jeneral.annotations.InlineVelocity;
+import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
+import com.ochafik.lang.jeneral.annotations.Value;
 import com.ochafik.util.CompoundCollection;
 import com.ochafik.util.listenable.Pair;
 import com.ochafik.util.string.RegexUtils;
@@ -85,12 +87,21 @@ cd /Users/ochafik/Prog/Java && rm templates_logs.txt >/dev/null ; apt -factory c
 public class TemplateProcessor extends AbstractProcessor {
 	private static final String 
 		//GENERATED_INTERFACE _SUFFIX = "_Template",
-		GENERATED_FACTORY_NAME = "template",
-		GENERATED_IMPLEMENTATION_NAME = "_";
+		GENERATED_FACTORY_NAME = "template"/*,
+		GENERATED_IMPLEMENTATION_NAME = "_"*/;
 		
+	@SuppressWarnings({ "unchecked", "unused" })
 	private Class<?>[] deps = array(
 		ReificationUtils.class,
-		TemplatesHelper.class
+		TemplateInstance.class,
+		TemplatesHelper.class,
+		InlineVelocity.class,
+		Instantiate.class,
+		Param.class,
+		ParamConstructor.class,
+		Property.class,
+		Template.class,
+		Value.class
 	);
  
 	public TemplateProcessor(AnnotationProcessorEnvironment env){
@@ -149,14 +160,17 @@ public class TemplateProcessor extends AbstractProcessor {
 		final List<FieldDeclaration> veloScripts;
 		final List<FieldDeclaration> propertiesToAddToConstructors;
 		final String qualifiedTemplateNameWithGenericsUsage;
+		final String implemClassName;
+		//final boolean implemClassIsAbstract;
 		
 		public TemplateInfo(ClassDeclaration classDeclaration) {
 			this.classDeclaration = classDeclaration;
 			//templateInterfaceQualifiedName = classDeclaration.getQualifiedName() + GENERATED_INTERFACE_SUFFIX;
 			//templateInterfaceName = classDeclaration.getSimpleName() + GENERATED_INTERFACE_SUFFIX;
 			
-			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^(.*\\.)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}_{2}"));
+			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^((?:.*\\.)?)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}_{2}_"));
 			templateInterfaceName = "_" + classDeclaration.getSimpleName() + "_";
+			implemClassName = classDeclaration.getSimpleName() + "Impl";
 			
 			packageName = classDeclaration.getPackage().getQualifiedName();
 			List<String> genDefs = new ArrayList<String>();
@@ -199,6 +213,8 @@ public class TemplateProcessor extends AbstractProcessor {
 					veloScripts.add(field);
 				}
 			}
+			
+			//implemClassIsAbstract = !(genericParamNames.isEmpty() && propertiesToAddToConstructors.isEmpty());
 			qualifiedTemplateNameWithGenericsUsage = classDeclaration.getQualifiedName() + genericParamsUsage;
 		}
 	};
@@ -394,7 +410,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			"//",
 			templateClassInfo.packageName.length() == 0 ? null : "package " + templateClassInfo.packageName + ";",
 			"",
-			"private interface " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsDefinition + " extends " + TemplateInstance.class.getName() + " {",
+			"interface " + templateClassInfo.templateInterfaceName + templateClassInfo.genericParamsDefinition + " extends " + TemplateInstance.class.getName() + " {",
 			""
 		));
 		
@@ -546,7 +562,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> ctorInfos) {
 		f.println("/// Concrete implementation of " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
 		//f.println("@SuppressWarnings(\"unchecked\")");
-		f.println("private static abstract class " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsDefinition + " extends " + templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage + " {");
+		f.println("private static " + (templateInfo.genericParamNames.isEmpty() ? "" : "abstract ") +"class " + templateInfo.implemClassName + templateInfo.genericParamsDefinition + " extends " + templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage + " {");
 	
 		Set<String> existingFields = new TreeSet<String>();
 		existingFields.addAll(templateInfo.genericParamNames);
@@ -555,7 +571,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			//String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
 			f.println(ctorInfo.constructorDeclaration.getDocComment());
 			f.printfn(
-				"public " + GENERATED_IMPLEMENTATION_NAME + "(%s) %s {",
+				"public " + templateInfo.implemClassName + "(%s) %s {",
 				implode(ctorInfo.generatedConstructorArgumentsDeclarations), 
 				wrappedImplosion(ctorInfo.constructorDeclaration.getThrownTypes(), "throws ", "")
 			); 
@@ -580,9 +596,10 @@ public class TemplateProcessor extends AbstractProcessor {
 		writeGettersAndSetters(f, templateInfo);
 		writeGenericParameterConstructingMethodsCode(f, templateInfo);
 		
+		/// Enable introspection
 		
-		f.println("public " + TemplateClass.class.getName() + " getTemplateClass() {");
-		f.println("throw new " + UnsupportedOperationException.class.getName() + "();");
+		f.println("public " + TemplateClass.class.getName() + " getTemplate() {");
+		f.println("return new template();");//throw new " + UnsupportedOperationException.class.getName() + "();");
 		f.println("}");
 		
 		f.println("}");		
@@ -641,19 +658,27 @@ public class TemplateProcessor extends AbstractProcessor {
 					wrappedImplosion(ctorInfo.constructorDeclaration.getThrownTypes(), "throws ", "")); 
 			
 			String instanceName = chooseUniqueName("instance", ctorInfo.existingArgumentNames, false);
-			f.printfn("%s %s = new %s(%s) {",
-				templateInfo.qualifiedTemplateNameWithGenericsUsage,
-				instanceName,
-				GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage,
-				implode(ctorInfo.generatedConstructorArguments)
-			);
-			
-			writeGenericParamRelatedMethods(f, templateInfo, ctorInfo);
-			//createImplementationClassCode(f, templateInfo, ctorInfos, true, ctorInfo.genericParamClassArgNames);
-			
-			f.println("};");
-			f.println("return " + instanceName + ";");
-			f.println("}");
+			if (!templateInfo.genericParamNames.isEmpty()) {
+				f.printfn("%s %s = new %s(%s) {",
+					templateInfo.qualifiedTemplateNameWithGenericsUsage,
+					instanceName,
+					templateInfo.implemClassName + templateInfo.genericParamsUsage,
+					implode(ctorInfo.generatedConstructorArguments)
+				);
+				
+				writeGenericParamRelatedMethods(f, templateInfo, ctorInfo);
+				//createImplementationClassCode(f, templateInfo, ctorInfos, true, ctorInfo.genericParamClassArgNames);
+				
+				f.println("};");
+				f.println("return " + instanceName + ";");
+				f.println("}");
+			} else {
+				f.printfn("return new %s(%s);",
+					templateInfo.implemClassName + templateInfo.genericParamsUsage,
+					implode(ctorInfo.generatedConstructorArguments)
+				);
+				f.println("};");
+			}
 		}
 		
 		createImplementationClassCode(f, templateInfo, ctorInfos);
