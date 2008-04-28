@@ -22,7 +22,6 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Arrays;
 import java.util.Random;
 
 import com.ochafik.lang.jeneral.Array;
@@ -45,7 +44,7 @@ import com.ochafik.lang.jeneral.annotations.Template;
  * @author Rob Eden
  */
 @Template
-public abstract class PArrayList<E extends Comparable<E>> implements Externalizable, Cloneable, PArrayList_Template<E> {
+public abstract class PArrayList<E extends Comparable<E>> implements Externalizable, Cloneable, _PArrayList_<E> {
 	static final long serialVersionUID = 1L;
 	
 	@ParamConstructor(returnNeutralValue = true)
@@ -512,7 +511,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
     	if (end < begin) throw new IllegalArgumentException("end index " + end + " greater than begin index " + begin);
 		if (begin < 0) throw new IndexOutOfBoundsException("begin index can not be < 0");
 		if (end > _data.length()) throw new IndexOutOfBoundsException("end index < " + _data.length());
-        PArrayList<E> list = PArrayList_Template.Factory.newInstance(E(), end - begin);
+        PArrayList<E> list = PArrayList.template.newInstance(E(), end - begin);
         for (int i = begin; i < end; i++) {
         	list.add(_data.get(i));
         }
@@ -965,7 +964,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
     }
     
     public static void main(String[] args) {
-		PArrayList<Integer> list = PArrayList_Template.Factory.newInstance(Integer.class);
+		PArrayList<Integer> list = PArrayList.template.newInstance(Integer.class);
 		list.add(1);
 		list.add(2);
 		list.add(3);

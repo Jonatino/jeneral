@@ -4,7 +4,7 @@ import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
-public abstract class UnparameterizedTemplate implements UnparameterizedTemplate_Template 
+public abstract class UnparameterizedTemplate implements _UnparameterizedTemplate_ 
 {
 	@Property
 	int count;
