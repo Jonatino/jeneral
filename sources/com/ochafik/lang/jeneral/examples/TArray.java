@@ -13,19 +13,19 @@ import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 
 @Template
-public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray_Template<T, U, V, W> {
+public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArray_<T, U, V, W> {
 	/**
 	 * This is sick
 	 */
 	@Property
-	final Array<T> array;
+	final Array<T> array; 
 	
 	/**
 	 * int i() { return 0; }
 	 * void processConstants() { return; }
 	 */
-	@InlineVelocity
-	Glass  glass;
+	//@InlineVelocity
+	//Glass  glass;
 	
 	@ParamConstructor(returnNeutralValue = true)
 	protected abstract U new_U_neutral();
@@ -84,7 +84,7 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray
 	public TArray(int length) {
 		array = T(length);
 		getArray();
-		System.out.println("glass : " +glass.i()); 
+		//System.out.println("glass : " +glass.i()); 
 		System.out.println("new_U() -> " + new_U());
 		System.out.println("new_U_neutral() -> " + new_U_neutral());
 		/*try {
@@ -161,8 +161,10 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements TArray
 		int length = 10;
 		//TArray<Integer, Integer, MyTable> intArray = TArray_Template.Factory.newInstance(Integer.class, Integer.class, MyTable.class, length);
 		//TArray<Integer, Integer> intArray = TArray_Template.Factory.newInstance(Integer.class, Integer.TYPE, length);
-		TArray<Integer, Integer, Integer, Integer> intArray= TArray_Template.Factory.newInstance(Integer.TYPE, Integer.class, Integer.TYPE, Integer.TYPE, length);
+		TArray<Integer, Integer, Integer, Integer> intArray= TArray.template.newInstance(Integer.TYPE, Integer.class, Integer.TYPE, Integer.TYPE, length);
 		intArray.set(2, 3);
 		intArray.list();
+		
+		TArray<Integer, Integer, Integer, Integer> intArray2  = TArray.template.newInstance(Integer.TYPE, Integer.class, Integer.TYPE, Integer.TYPE, length);
 	}
 }
