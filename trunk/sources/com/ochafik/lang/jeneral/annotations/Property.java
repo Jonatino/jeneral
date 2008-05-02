@@ -20,5 +20,5 @@
 package com.ochafik.lang.jeneral.annotations;
 
 public @interface Property {
-	boolean addToConstructors() default false;
+	boolean construct() default false;
 }

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
+import java.lang.instrument.ClassDefinition;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,6 +52,7 @@ import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.declaration.TypeDeclaration;
 import com.sun.mirror.declaration.TypeParameterDeclaration;
 import com.sun.mirror.type.InterfaceType;
+import com.sun.mirror.type.TypeMirror;
 import com.sun.mirror.util.SourcePosition;
 
 public abstract class AbstractProcessor implements AnnotationProcessor {
@@ -83,6 +85,10 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		environment.getMessager().printWarning(position, string);
 	}
 	protected void logError(Declaration d, Throwable t) {
+		logError(d.getPosition(), t);
+	}
+	protected void logError(SourcePosition d, Throwable t) {
+		
 		StringWriter sout = new StringWriter();
 		PrintWriter p = new PrintWriter(sout);
 		t.printStackTrace(p);
@@ -102,10 +108,41 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		return (AnnotationTypeDeclaration)environment.getTypeDeclaration(cl.getName());
 	}
 	
-	protected AnnotationMirror findAnnotation(Declaration decl, AnnotationTypeDeclaration anno) {
+	/*protected AnnotationMirror findAnnotation(Declaration decl, AnnotationTypeDeclaration anno) {
 		for (AnnotationMirror ann : decl.getAnnotationMirrors()) {
 			if (ann.getAnnotationType().getDeclaration().equals(anno))
 				return ann;
+		}
+		return null;
+	}*/
+	protected AnnotationMirror findAnnotation(Declaration decl, Class<? extends Annotation> annoClass) {
+		//AnnotationTypeDeclaration anno = (AnnotationTypeDeclaration)environment.getTypeDeclaration(annoClass.getName());
+		for (AnnotationMirror ann : decl.getAnnotationMirrors()) {
+			if (ann.getAnnotationType().getDeclaration().getQualifiedName().equals(annoClass.getName()))
+				return ann;
+		}
+		return null;
+	}
+	
+	protected Object findAnnotationValueOfType(AnnotationMirror ann, Class<?> valueClass) {
+		for (Map.Entry<AnnotationTypeElementDeclaration, AnnotationValue> e : ann.getElementValues().entrySet()) {
+			
+			//TypeMirror m;
+			//AnnotationTypeElementDeclaration dec = e.getKey();
+			//dec.getSimpleName()
+			
+			if (e.getKey().getReturnType().toString().equals(valueClass.getName())) {
+				return e.getValue().getValue();
+			}
+		}
+		return null;
+	}
+	
+	protected Object findAnnotationValueForName(AnnotationMirror ann, String name) {
+		for (Map.Entry<AnnotationTypeElementDeclaration, AnnotationValue> e : ann.getElementValues().entrySet()) {
+			if (e.getKey().getSimpleName().equals(name)) {
+				return e.getValue().getValue();
+			}
 		}
 		return null;
 	}

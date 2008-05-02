@@ -22,4 +22,13 @@ package com.ochafik.lang.jeneral.annotations;
 public @interface ParamConstructor {
 	/// Neutral value is zero for primitive types and null for non-primitive types
 	boolean returnNeutralValue() default false;
+	
+	/// Calling a factory method corresponding to an optional constructor might raise a NoSuchConstructorException it the constructor is found not to exist when its corresponding factory method is invoked.
+	boolean optional() default false;
+	
+	public static class NoSuchConstructorException extends Exception {
+		private static final long serialVersionUID = 3302422751750045358L;
+		public NoSuchConstructorException(String text) { super(text); }
+		public NoSuchConstructorException(String text, Throwable t) { super(text, t); }
+	}
 }
