@@ -1,0 +1,8 @@
+
+/**
+ * Does nothing important !
+ */
+public int testMethod() {
+	// do nothing
+	return -1;
+}

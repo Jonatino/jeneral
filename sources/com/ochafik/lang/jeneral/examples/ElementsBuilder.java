@@ -33,7 +33,7 @@ import com.ochafik.lang.jeneral.annotations.Template;
 public abstract class ElementsBuilder<T> implements _ElementsBuilder<T> {
 	 
 	// Generate getters and setters for the 'arg' property, and append it to all ElementBuilder's factory methods
-	@Property(addToConstructors = true)
+	@Property(construct = true)
 	String arg;
 	
 	// Declare that T must have a constructor T(String) that throws no checked exception, and that it should be accessible as the method new_T :
@@ -55,7 +55,7 @@ public abstract class ElementsBuilder<T> implements _ElementsBuilder<T> {
 		// There is one newInstance method for each public constructor of the template class
 		// Each newInstance method has the following arguments :
 		//   - classes of generic template parameter 
-		//   - constant template parameters, if any (here Test has no constant template parameter)
+		//   - constant template parameters, if any
 		//   - arguments of the constructor that corresponds to this newInstance method (here String arg, which was added implicitely to the unique Test() constructor by the @Property(fromConstructor = true) annotation)
 		try {
 			ElementsBuilder<JLabel> labelBuilder = ElementsBuilder.template.newInstance(JLabel.class, "Default Label Text");

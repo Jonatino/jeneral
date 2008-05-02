@@ -4,6 +4,7 @@ public @interface Include {
 	String script() default "";
 	String engine() default "";
 	Class<?> type() default Object.class;
+	//String typeName() default "";
 	boolean keepConstructors() default true;
 	
 	public enum Insertion {

@@ -12,6 +12,6 @@ public abstract class UnparameterizedTemplate implements _UnparameterizedTemplat
 	@Property
 	String text;
 	
-	@Property(addToConstructors = true)
+	@Property(construct = true)
 	protected int id;
 }

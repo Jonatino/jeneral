@@ -60,7 +60,8 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 			Param.class.getName(),
 			Property.class.getName(),
 			TemplatesPrimitive.class.getName(),
-			Array.class.getName(),
+			TemplatesHelper.class.getName(),
+			//Array.class.getName(),
 			TemplatesHelper.class.getName(), 
 			Include.class.getName(),
 			Includes.class.getName()
