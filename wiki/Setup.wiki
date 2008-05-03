@@ -1,10 +1,27 @@
 #summary Setup and configuration
 
-= Java 6 =
-Just compile your code with javac, making sure jeneral.jar is in your classpath
-
-= Java 5 =
-Use apt instead of javac to compile your code
+= NetBeans =
+ * TODO
 
 = Eclipse =
-[http://help.eclipse.org/help33/index.jsp?topic=/org.eclipse.jdt.doc.isv/guide/jdt_apt_getting_started.htm Configure Apt in Eclipse]
+ * Download jeneral.jar.
+ * Right click on your project and open its properties
+ * Go to Java Compiler / Annotation Processing and check all the boxes ("Enable project specific settings", "Enable annotation processing" and "Enable processing in editor")
+ * Go to Factory Path (under Java Compiler / Annotation Processing) and add jeneral.jar as an external JAR.
+ * Click on OK, that's it !
+ * Now go to the [QuickStart] section.
+
+More info on this configuration step is available in eclipse documentation :  [http://help.eclipse.org/help33/index.jsp?topic=/org.eclipse.jdt.doc.isv/guide/jdt_apt_getting_started.htm Configure Apt in Eclipse]
+
+= Bare JDK (>= 5) =
+ * Download jeneral.jar.
+ * Use apt instead of javac to compile your code : 
+{{{
+	javac -cp myDir1:lib1.jar... path/myClass.java
+}}}
+becomes : 
+{{{
+	apt -factorypath jeneral.jar -cp jeneral.jar:myDir1:lib1.jar... path/myClass.java
+}}}
+ * Now go to the [QuickStart] section.
+
