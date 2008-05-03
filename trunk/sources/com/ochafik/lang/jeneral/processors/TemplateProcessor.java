@@ -413,6 +413,11 @@ public class TemplateProcessor extends AbstractProcessor {
 //			}
 			
 			try {
+				//String script = getDocCommentContent(veloField);
+//				if (script == null) {
+//					printError(veloField, "Failed to parse the inline velocity script. Make sure it is right before the @" + InlineVelocity.class.getName() + " annotation.");
+//					continue;
+//				}
 				String scriptSource = readResource(scriptName, templateInfo.classDeclaration.getPosition().file(), templateInfo.classDeclaration.getPackage().getQualifiedName());
 				String scriptResult = evalScript(templateInfo, scriptName, scriptSource, includePosition);
 				
