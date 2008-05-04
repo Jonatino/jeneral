@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,18 +49,11 @@ import java.util.regex.Pattern;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.context.Context;
-import org.apache.velocity.exception.MethodInvocationException;
-import org.apache.velocity.exception.ParseErrorException;
-import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.RuntimeServices;
 import org.apache.velocity.runtime.log.LogChute;
 
-import sun.tools.javap.oldjavap.JavaP;
-
 import com.ochafik.admin.JavaParsingUtils;
 import com.ochafik.admin.velocity.IOTool;
-import com.ochafik.admin.velocity.MapWrap;
-import com.ochafik.admin.velocity.RuntimeTool;
 import com.ochafik.io.ReadText;
 import com.ochafik.lang.jeneral.AbstractTemplateClass;
 import com.ochafik.lang.jeneral.Array;
@@ -69,15 +63,13 @@ import com.ochafik.lang.jeneral.TemplateContractViolationException;
 import com.ochafik.lang.jeneral.TemplateInstance;
 import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
-import com.ochafik.lang.jeneral.annotations.InlineVelocity;
+import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
-import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
 import com.ochafik.lang.jeneral.annotations.Value;
-import com.ochafik.lang.jeneral.processors.AbstractProcessor.LinesFormatter;
 import com.ochafik.util.CompoundCollection;
 import com.ochafik.util.listenable.Pair;
 import com.ochafik.util.string.RegexUtils;
@@ -113,7 +105,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		ReificationUtils.class,
 		TemplateInstance.class,
 		TemplatesHelper.class,
-		InlineVelocity.class,
 		Includes.class,
 		Include.class,
 		Instantiate.class,
@@ -127,18 +118,11 @@ public class TemplateProcessor extends AbstractProcessor {
 	public TemplateProcessor(AnnotationProcessorEnvironment env){
 		super(env);
 
-		Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, new LogChute() {
-			public void init(RuntimeServices arg0) throws Exception {}
-			public boolean isLevelEnabled(int level) {
-				return level == ERROR_ID;
-			}
-			public void log(int arg0, String arg1) {
-				if (arg0 == ERROR_ID)
-					TemplateProcessor.this.log(ERROR_PREFIX + arg1);
-			}
-			public void log(int arg0, String arg1, Throwable arg2) {}
-			
-		});
+		initVelocity();
+		
+	}
+	
+	private void initVelocity() {
 		try {
 			Velocity.init();
 		} catch (Exception e) {
@@ -147,22 +131,12 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		context = new VelocityContext();
 		context.put("context", context);
-		//context.put("lists", new ListTool());
-		//context.put("alternator", new AlternatorTool());
-		//context.put("date", new ComparisonDateTool());
-		//context.put("escape", new EscapeTool());
-		//context.put("math", new MathTool());
-		//context.put("number", new NumberTool());
-		//context.put("sort", new SortTool());
-		//context.put("resource", new ResourceTool());
-		//context.put("runtime", new RuntimeTool());
 		context.put("io", new IOTool());
 		context.put("environment", environment);
-		//context.put("environment", new MapWrap<String,String>(System.getenv()));
 		//context.put("properties", new SystemProperties());
 		//context.put("arguments", applicationArgs);
 	}
-	
+
 	Context context;
 
 	public class GeneratedMethodInfo {
@@ -183,7 +157,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		final Map<String, Pair<MethodDeclaration, List<MethodDeclaration>>> paramConstructorContracts;
 		final List<FieldDeclaration> properties;
-		final List<FieldDeclaration> veloScripts;
 		final List<FieldDeclaration> propertiesToAddToConstructors;
 		final String qualifiedTemplateNameWithGenericsUsage;
 		final String implemClassName;
@@ -195,6 +168,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		//final boolean implemClassIsAbstract;
 		final List<GeneratedMethodInfo> generatedMethods = new ArrayList<GeneratedMethodInfo>();
 		
+		final List<ConstructorInfo> constructorInfos;
 		public GeneratedMethodInfo newMethod(String name, Class<?>[] arguments, Class<? extends Throwable>[] throwedTypes) {
 			GeneratedMethodInfo m = new GeneratedMethodInfo();
 			m.name = name;
@@ -205,8 +179,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		public TemplateInfo(ClassDeclaration classDeclaration) {
 			this.classDeclaration = classDeclaration;
-			//templateInterfaceQualifiedName = classDeclaration.getQualifiedName() + GENERATED_INTERFACE_SUFFIX;
-			//templateInterfaceName = classDeclaration.getSimpleName() + GENERATED_INTERFACE_SUFFIX;
 			
 			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^((?:.*\\.)?)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}_{2}"));
 			templateInterfaceName = "_" + classDeclaration.getSimpleName();
@@ -223,13 +195,11 @@ public class TemplateProcessor extends AbstractProcessor {
 			genericParamsUsage = wrappedImplosion(genericParamNames, "<", ">");
 			
 			paramConstructorContracts = getGenericParamConstructorsContracts(classDeclaration, genericParamNames);
-			veloScripts = new ArrayList<FieldDeclaration>();
 			properties = new ArrayList<FieldDeclaration>();
 			propertiesToAddToConstructors = new ArrayList<FieldDeclaration>();
 			for (FieldDeclaration field : classDeclaration.getFields()) {
 				Property prop = field.getAnnotation(Property.class);
-				InlineVelocity velo = field.getAnnotation(InlineVelocity.class);
-				if (prop == null && velo == null)
+				if (prop == null)
 					continue;
 				
 				if (prop != null) {
@@ -246,16 +216,15 @@ public class TemplateProcessor extends AbstractProcessor {
 					}
 				}
 				
-				if (velo != null) {
-					if (field.getModifiers().contains(Modifier.PRIVATE))
-						printError(field, "Inline scripts must be attached to non-private uninitialized fields.");
-						
-					veloScripts.add(field);
-				}
 			}
 			
 			//implemClassIsAbstract = !(genericParamNames.isEmpty() && propertiesToAddToConstructors.isEmpty());
 			qualifiedTemplateNameWithGenericsUsage = classDeclaration.getQualifiedName() + genericParamsUsage;
+			
+			constructorInfos = new ArrayList<ConstructorInfo>();
+			for (ConstructorDeclaration originalConstructor : classDeclaration.getConstructors())
+				if (originalConstructor.getModifiers().contains(Modifier.PUBLIC))
+					constructorInfos.add(new ConstructorInfo(this, originalConstructor));
 		}
 	};
 	
@@ -353,7 +322,6 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	public void process() {
 		AnnotationTypeDeclaration templateAnno = getAnnotationType(Template.class);
-		
 		for (Declaration dec : environment.getDeclarationsAnnotatedWith(templateAnno)) {
 			//logClassHier(c);
 			
@@ -389,29 +357,11 @@ public class TemplateProcessor extends AbstractProcessor {
 		processInclude(templateInfo, templateInfo.classDeclaration.getAnnotation(Include.class), includesPosition);
 	}
 	private void processInclude(TemplateInfo templateInfo, Include inclusion, SourcePosition includePosition) {
-		//Include inclusion = templateInfo.classDeclaration.getAnnotation(Include.class);
-		//AnnotationMirror classIncludeAnnotation = findAnnotation(templateInfo.classDeclaration, Include.class);
-		//Object includedClassAnnoValue = classIncludeAnnotation == null ? null : findAnnotationValueOfType(classIncludeAnnotation, Class.class);
-		//Object includedClassAnnoValue = classIncludeAnnotation == null ? null : findAnnotationValueForName(classIncludeAnnotation, "type");
-		
-		/*if (includedClassAnnoValue == null) {
-			printError(classIncludeAnnotation == null ? templateInfo.classDeclaration.getPosition() : classIncludeAnnotation.getPosition(), 
-					classIncludeAnnotation == null ? "Did not find the annotation !" : 
-					"Not enough arguments. Needs a type reference or a script.");
-			return;
-		}
-		*/
 		if (inclusion == null)
 			return;
 		
 		String scriptName = inclusion.script();
 		if (scriptName.length() > 0) {
-//			String script = getDocCommentContent(veloField);
-//			if (script == null) {
-//				printError(veloField, "Failed to parse the inline velocity script. Make sure it is right before the @" + InlineVelocity.class.getName() + " annotation.");
-//				continue;
-//			}
-			
 			try {
 				//String script = getDocCommentContent(veloField);
 //				if (script == null) {
@@ -428,8 +378,6 @@ public class TemplateProcessor extends AbstractProcessor {
 			} catch (IOException e) {
 				logError(templateInfo.classDeclaration, e);
 			}
-			
-			
 		} else {
 			String typeName;
 			try {
@@ -549,51 +497,52 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 	}
-	/*private CustomGeneratedInnerClass processInlineVelocity(Declaration dec) {
-		if (!(dec instanceof FieldDeclaration)) {
-			printVeloHelp(dec);
-			return null;
-		}
-		FieldDeclaration decl = (FieldDeclaration)dec;
-		if (decl.getModifiers().contains(Modifier.PRIVATE) ||
-				!decl.getModifiers().contains(Modifier.FINAL) || 
-				decl.toString().contains(" = ")) 
-		{
-			printVeloHelp(dec);
-			return null;
-		}
-	}*/
+
 	private void processTemplateClass(ClassDeclaration classDeclaration) throws IOException 
 	{
-		AnnotationMirror templateAnnotationMirror = null;
-		for (AnnotationMirror annoMirror : classDeclaration.getAnnotationMirrors()) {
-			if (annoMirror.getAnnotationType().toString().equals(Template.class.getName())) {
-				templateAnnotationMirror = annoMirror;
-				break;
-			}
-		}
+		AnnotationMirror templateAnnotationMirror = findAnnotation(classDeclaration, Template.class);
 		if (templateAnnotationMirror == null) 
 			return;
 		
 		if (classDeclaration.getDeclaringType() != null) {
+			// TODO remove this limitation
 			printError(templateAnnotationMirror.getPosition(), "Cannot define nested classes as templates.");
 			return;
 		}
 		
-		if (!classDeclaration.getModifiers().contains(Modifier.ABSTRACT)) {
+		if (!classDeclaration.getModifiers().contains(Modifier.ABSTRACT))
 			printError(classDeclaration, "Template "+classDeclaration.getQualifiedName()+" must be declared as abstract.");
-		}
 		
+		/// Build the template info structure
 		TemplateInfo templateInfo = new TemplateInfo(classDeclaration);
+		
+		checkTemplateClassGenericParametersMatchItsInterface(templateInfo);
 		
 		/// Process Include statements
 		processIncludes(templateInfo, templateInfo.classDeclaration.getPosition());
 		
+		/// Now generate the template interface + implementation with factory methods
+		generateTemplateInterfaceAndImplementation(templateInfo);
+		
+		instantiationTest(templateInfo);
+	}
+
+	private void instantiationTest(TemplateInfo templateInfo) throws IOException {
+		String source = ReadText.readText(templateInfo.classDeclaration.getPosition().file()); 
+		if (source != null) {
+			Instantiator instantiator = new Instantiator(environment, templateInfo);
+			LinkedHashMap<String, Object> values = new LinkedHashMap<String, Object>();
+			values.put("T", Integer.TYPE);
+			instantiator.instantiateTemplate(values);
+		}
+	}
+
+	private void generateTemplateInterfaceAndImplementation(TemplateInfo templateInfo) throws IOException {
 		LinesFormatter f = new LinesFormatter(environment.getFiler().createSourceFile(templateInfo.templateInterfaceQualifiedName), "");
 		
 		f.println(array(
 			"//",
-			"// This file was autogenerated by " + getClass().getName() + " from " + classDeclaration.getQualifiedName(),
+			"// This file was autogenerated by " + getClass().getName() + " from " + templateInfo.classDeclaration.getQualifiedName(),
 			"//",
 			templateInfo.packageName.length() == 0 ? null : "package " + templateInfo.packageName + ";",
 			""
@@ -619,49 +568,6 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 		
-		for (FieldDeclaration veloField : templateInfo.veloScripts) {
-			//String propertyName = veloField.getSimpleName();
-			//f.println(veloField.getDocComment());
-			
-			String script = getDocCommentContent(veloField);
-			if (script == null) {
-				printError(veloField, "Failed to parse the inline velocity script. Make sure it is right before the @" + InlineVelocity.class.getName() + " annotation.");
-				continue;
-			}
-			StringWriter out = new StringWriter();
-			StringWriter errOut = new StringWriter();
-			final PrintWriter epout = new PrintWriter(errOut);
-			try {
-				Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, new LogChute() {
-					public void init(RuntimeServices arg0) throws Exception {}
-					public boolean isLevelEnabled(int level) {
-						return level == ERROR_ID;
-					}
-					public void log(int arg0, String arg1) {
-						if (arg0 == ERROR_ID)
-							epout.println(ERROR_PREFIX + arg1);
-					}
-					public void log(int arg0, String arg1, Throwable arg2) {}
-					
-				});
-				if (!Velocity.evaluate(context, out, veloField.toString(), new StringReader(script))) {
-					printError(veloField, "Evaluation of Velocity script failed. See generated source for details.");
-				}
-				String errorString = errOut.toString();
-				f.println("/**");
-				f.println("* Expansion of inline velocity script");
-				f.println(errorString.length() == 0 ? null : "* " +errorString.replaceAll("\n", "\n* "));
-				f.println("*/");
-				
-				f.println("final class " + veloField.getType() + " {");
-				f.println(out.toString());
-				f.println("}");
-				f.println();
-			} finally {
-				//Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, null);
-			}
-		}
-		
 		// Headers for T() and T(int)
 		for (String genericParamName : templateInfo.genericParamNames) {
 			String lengthName = chooseUniqueName("arraySize", Collections.singleton(genericParamName), false);
@@ -682,42 +588,28 @@ public class TemplateProcessor extends AbstractProcessor {
 			);
 		}
 		
-		List<ConstructorInfo> constructorInfos = new ArrayList<ConstructorInfo>();
-		for (ConstructorDeclaration originalConstructor : classDeclaration.getConstructors())
-			if (originalConstructor.getModifiers().contains(Modifier.PUBLIC))
-				constructorInfos.add(new ConstructorInfo(templateInfo, originalConstructor));
-		
 		for (String h : templateInfo.additionalHeaders) {
 			f.println(h);
 			f.println();
 		}
 		
-		createFactoryClassCode(f, templateInfo, constructorInfos);
+		createFactoryClassCode(f, templateInfo);
 		
 		
 		f.println("}");
 		f.close();
-		
-		checkTemplateClassGenericParametersMatchItsInterface(templateInfo);
-		
-		String sourceFile = templateInfo.classDeclaration.getQualifiedName().replace('.', '/') + ".java";
-		String source = ReadText.readText(getClass().getClassLoader().getResourceAsStream(sourceFile));
-		if (source != null) {
-			String simple = templateInfo.classDeclaration.getSimpleName();
-			String decoratedName = simple + "__int";
-		}
 	}
 
-	private String getDocCommentContent(Declaration veloField) {
-		String comment = veloField.getDocComment();
+	private String getDocCommentContent(Declaration declaration) {
+		String comment = declaration.getDocComment();
 		if (comment == null || comment.length() == 0) {
-			String source = ReadText.readText(veloField.getPosition().file());
+			String source = ReadText.readText(declaration.getPosition().file());
 			if (source == null)
 				return null;
 			
-			int offset = computeOffset(source, veloField.getPosition());
+			int offset = computeOffset(source, declaration.getPosition());
 			if (offset < 0) {
-				printError(veloField, "Failed to parse source comment");
+				printError(declaration, "Failed to parse source comment");
 				return null;
 			}
 			int i = source.lastIndexOf("*/", offset);
@@ -756,7 +648,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		return i + pos.column();
 	}
 	
-	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> ctorInfos) {
+	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo) {
 		f.println();
 		f.println("/// Concrete implementation of " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
 		//f.println("@SuppressWarnings(\"unchecked\")");
@@ -765,7 +657,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		Set<String> existingFields = new TreeSet<String>();
 		existingFields.addAll(templateInfo.genericParamNames);
 		
-		for (ConstructorInfo ctorInfo : ctorInfos) {
+		for (ConstructorInfo ctorInfo : templateInfo.constructorInfos) {
 			//String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
 			f.println(ctorInfo.constructorDeclaration.getDocComment());
 			f.printfn(
@@ -780,11 +672,6 @@ public class TemplateProcessor extends AbstractProcessor {
 			for (FieldDeclaration propertyField : templateInfo.propertiesToAddToConstructors) {
 				String propertyName = propertyField.getSimpleName();
 				f.println("this." + propertyName + " = " + ctorInfo.propertiesInitArgNames.get(propertyName) + ";");
-			}
-			
-			for (FieldDeclaration veloField : templateInfo.veloScripts) {
-				String veloName = veloField.getSimpleName();
-				f.println("this." + veloName + " = new " + veloField.getType() + "();");
 			}
 			
 			f.println("}");
@@ -847,7 +734,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 	}
-	private void createFactoryClassCode(LinesFormatter f, TemplateInfo templateInfo, List<ConstructorInfo> ctorInfos) {
+	private void createFactoryClassCode(LinesFormatter f, TemplateInfo templateInfo) {
 		f.println("/// Factory class for " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
 		f.println("@SuppressWarnings(\"unchecked\")");
 		f.println("public final static class " + GENERATED_FACTORY_NAME + " extends " + AbstractTemplateClass.class.getName() + " {");
@@ -857,7 +744,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				"protected " + GENERATED_FACTORY_NAME + "(Class<?>... genericTypes) { super(genericTypes); }",
 				""
 		));
-		for (ConstructorInfo ctorInfo : ctorInfos) {
+		for (ConstructorInfo ctorInfo : templateInfo.constructorInfos) {
 			
 			String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
 			f.println(ctorInfo.constructorDeclaration.getDocComment());
@@ -893,55 +780,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 		
-		createImplementationClassCode(f, templateInfo, ctorInfos);
-		
-		/*for (ConstructorInfo ctorInfo : ctorInfos) {
-			
-			String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
-			f.println(ctorInfo.constructorDeclaration.getDocComment());
-			f.printfn(
-				"public static final %s %s newInstance(%s) %s {",
-				templateInfo.genericParamsDefinition,
-				qualifiedTemplateInterfaceNameWithGenericsUsage,
-				implode(ctorInfo.generatedConstructorArgumentsDeclarations), 
-				wrappedImplosion(ctorInfo.constructorDeclaration.getThrownTypes(), "throws ", "")); 
-					 
-			String instanceName = chooseUniqueName("instance", ctorInfo.existingArgumentNames, false);
-			f.println("return new " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage + "(" + implode(ctorInfo.generatedConstructorArguments) + ");");
-			f.println("}");
-		}
-		//createImplementationClassCode(f, templateInfo, ctorInfos, false, null);
-		*/
-		/*
-		for (ConstructorInfo ctorInfo : ctorInfos) {
-			
-			String qualifiedTemplateInterfaceNameWithGenericsUsage = templateInfo.classDeclaration.getQualifiedName() + templateInfo.genericParamsUsage;
-			f.println(ctorInfo.constructorDeclaration.getDocComment());
-			f.printfn(
-				"public static final %s %s newInstance(%s) %s {",
-				templateInfo.genericParamsDefinition,
-				qualifiedTemplateInterfaceNameWithGenericsUsage,
-				implode(ctorInfo.generatedConstructorArgumentsDeclarations), 
-				wrappedImplosion(ctorInfo.constructorDeclaration.getThrownTypes(), "throws ", "")); 
-					 
-			String instanceName = chooseUniqueName("instance", ctorInfo.existingArgumentNames, false);
-			f.printfn("%s %s = new %s(%s) {",
-				templateInfo.qualifiedTemplateNameWithGenericsUsage,
-				instanceName,
-				templateInfo.qualifiedTemplateNameWithGenericsUsage,
-				implode(ctorInfo.generatedConstructorArguments)
-			);
-			
-			createImplementationClassCode(f, templateInfo, ctorInfos, true, ctorInfo.genericParamClassArgNames);
-			
-			f.println("};");
-			
-			f.println("return new " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage + "(" + implode(ctorInfo.generatedConstructorArguments) + ");");
-			//f.println("return new " + GENERATED_IMPLEMENTATION_NAME + templateInfo.genericParamsUsage + "(" + implode(ctorInfo.generatedConstructorArguments) + ");");
-			f.println("}");
-		}*/
-		
-		
+		createImplementationClassCode(f, templateInfo);
 		
 		f.println("}");		
 	}
@@ -1118,4 +957,3 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 	}
 }
-

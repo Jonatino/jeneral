@@ -165,6 +165,8 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArra
 		intArray.set(2, 3);
 		intArray.list();
 				
+		//TArray__int.class;
+		
 		TArray<Integer, Integer, Integer, Integer> intArray2  = TArray.template.newInstance(Integer.TYPE, Integer.class, Integer.TYPE, Integer.TYPE, length);
 	}
 }
