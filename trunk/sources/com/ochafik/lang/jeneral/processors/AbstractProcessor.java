@@ -28,14 +28,13 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassDefinition;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 
+import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.util.listenable.AdaptedCollection;
 import com.ochafik.util.listenable.Adapter;
 import com.sun.mirror.apt.AnnotationProcessor;
@@ -108,17 +107,10 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		return (AnnotationTypeDeclaration)environment.getTypeDeclaration(cl.getName());
 	}
 	
-	/*protected AnnotationMirror findAnnotation(Declaration decl, AnnotationTypeDeclaration anno) {
-		for (AnnotationMirror ann : decl.getAnnotationMirrors()) {
-			if (ann.getAnnotationType().getDeclaration().equals(anno))
-				return ann;
-		}
-		return null;
-	}*/
 	protected AnnotationMirror findAnnotation(Declaration decl, Class<? extends Annotation> annoClass) {
-		//AnnotationTypeDeclaration anno = (AnnotationTypeDeclaration)environment.getTypeDeclaration(annoClass.getName());
 		for (AnnotationMirror ann : decl.getAnnotationMirrors()) {
-			if (ann.getAnnotationType().getDeclaration().getQualifiedName().equals(annoClass.getName()))
+			//if (ann.getAnnotationType().getDeclaration().getQualifiedName().equals(annoClass.getName()))
+			if (ann.getAnnotationType().toString().equals(annoClass.getName()))
 				return ann;
 		}
 		return null;
@@ -215,81 +207,6 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		return name;
 	}
 
-	protected class LinesFormatter {
-		PrintWriter out;
-		Stack<String> indentStack = new Stack<String>();
-		String currentIndent;
-		
-		public LinesFormatter(PrintWriter out, String initialIndent) {
-			this.out = out;
-			indentStack.push(initialIndent);
-			currentIndent = initialIndent;
-		}
-		
-		public void printfn(String fmt, Object... args) {
-			println(String.format(fmt, args));
-		}
-		public void println() {
-			out.println();
-		}
-		
-		public <T> void println(T[] arr) {
-			for (T t : arr)
-				println(t);
-		}
-		public void println(Object o) {
-			if (o == null)
-				return;
-			
-			String ss = o.toString();
-			for (String s : ss.split("\n")) {
-				s = s.trim();
-				if (s.startsWith("}")) {
-					indentStack.pop();
-					currentIndent = indentStack.empty() ? "" : indentStack.lastElement();
-				}
-				
-				out.print(currentIndent);
-				out.println(s);
-				
-				if (s.endsWith("{"))
-					indentStack.push(currentIndent = currentIndent + "\t");
-			}
-		}
-		
-		public void close() {
-			out.close();
-		}
-		public void format(String[] strings, Object... args) {
-			for (String ff : strings)
-				format(ff, args);
-		}
-		public void format(String f, Object... args) {
-			if (f == null)
-				return; 
-			
-			try {
-				println(MessageFormat.format(f, args));
-			} catch (Throwable t) {
-				throw new RuntimeException("During formatting of "+f, t);
-			}
-		}
-	}
-	
-	/*protected static List<String> collectGenericParamsArgumentsDeclaration(Collection<String> typeNames, boolean finalDecls, boolean argNameOnly, List<String> typeAndArgNameOut) {
-		if (typeAndArgNameOut == null)
-			typeAndArgNameOut = new ArrayList<String>();
-		
-		for (String type : typeNames) {
-			String argName = chooseVariableName(type);
-			if (argNameOnly)
-				typeAndArgNameOut.add(argName);
-			else
-				typeAndArgNameOut.add((finalDecls ? "final " : "") + Class.class.getName() + "<" + type + "> " + argName);
-		}
-		return typeAndArgNameOut;
-	}*/
-	
 	protected static String chooseVariableName(String typeName) {
 		String[] words = typeName.toString().split(".");
 		return chooseVariableNameFromSimpleName(words.length > 0 ? words[words.length - 1] : typeName);
