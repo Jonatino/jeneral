@@ -117,9 +117,8 @@ public class TemplateProcessor extends AbstractProcessor {
  
 	public TemplateProcessor(AnnotationProcessorEnvironment env){
 		super(env);
-
+		//log("\n\n\tnew TemplateProcessor\n\n");
 		initVelocity();
-		
 	}
 	
 	private void initVelocity() {
@@ -530,7 +529,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void instantiationTest(TemplateInfo templateInfo) throws IOException {
 		String source = ReadText.readText(templateInfo.classDeclaration.getPosition().file()); 
 		if (source != null) {
-			Instantiator instantiator = new Instantiator(environment, templateInfo);
+			HackedInstantiator instantiator = new HackedInstantiator(environment, templateInfo);
 			LinkedHashMap<String, Object> values = new LinkedHashMap<String, Object>();
 			values.put("T", Integer.TYPE);
 			instantiator.instantiateTemplate(values);
@@ -553,6 +552,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		f.println("interface " + templateInfo.templateInterfaceName + templateInfo.genericParamsDefinition + " extends " + TemplateInstance.class.getName() + " {");
 		f.println();
+		f.println("// " + templateInfo.properties);
 		
 		for (FieldDeclaration field : templateInfo.properties) {
 			String propertyName = field.getSimpleName();
