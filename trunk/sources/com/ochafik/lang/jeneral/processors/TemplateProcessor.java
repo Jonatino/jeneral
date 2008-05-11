@@ -92,7 +92,9 @@ import com.sun.mirror.type.TypeMirror;
 import com.sun.mirror.util.SourcePosition;
 
 /*
-cd /Users/ochafik/Prog/Java && rm templates_logs.txt >/dev/null ; apt -factory com.ochafik.lang.templates.TemplateProcessorFactory -d classes/ -s sources/.apt_generated/ -cp sources:classes sources/com/ochafik/lang/templates/*.java && open templates_logs.txt
+cd /Users/ochafik/Prog/Java && rm templates_logs.txt >/dev/null ; 
+apt -cp classes -factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory -d classes/ -s sources/.apt_generated/ -sourcepath sources:sources/.apt_generated sources/com/ochafik/lang/jeneral/examples/*.java
+ && open templates_logs.txt
  */
 public class TemplateProcessor extends AbstractProcessor {
 	private static final String 
