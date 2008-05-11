@@ -4,13 +4,13 @@ import java.io.IOException;
 
 import javax.swing.JTable;
 
-import com.ochafik.lang.jeneral.Array;
-import com.ochafik.lang.jeneral.TemplateContractViolationException;
 import com.ochafik.lang.jeneral.annotations.InlineVelocity;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
+import com.ochafik.lang.jeneral.runtime.Array;
+import com.ochafik.lang.jeneral.runtime.TemplateContractViolationException;
 
 @Template
 public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArray<T, U, V, W> {

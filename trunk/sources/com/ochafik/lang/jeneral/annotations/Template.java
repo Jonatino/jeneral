@@ -74,13 +74,13 @@ import org.apache.commons.lang.UnhandledException;
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.TYPE})
 public @interface Template {
-	Param[] params() default {};
+	Param[] additionalParameters() default {};
 	
 	/// Reifiable templates have a "Factory" inner class which various newInstance methods allow for pure-generics instantiation of the template.
-	boolean reifiable() default true;
+	//boolean reifiable() default true;
 	
 	/// If true, any template class referenced within the template class will be instantiated if its generic parameters contain one of the template's parameters 
-	boolean cascadesInstantiations() default true;
+	//boolean cascadesInstantiations() default true;
 	
 	/// Ways to implement missing interface methods (or abstract methods)
 	public enum DefaultImplementationStrategy {

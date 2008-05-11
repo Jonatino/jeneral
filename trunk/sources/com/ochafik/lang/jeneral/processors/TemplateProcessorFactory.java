@@ -28,14 +28,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 
-import com.ochafik.lang.jeneral.Templates.TemplatesPrimitives;
+import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Param;
+import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
-import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
+import com.ochafik.lang.jeneral.annotations.Value;
 import com.sun.mirror.apt.AnnotationProcessor;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.apt.AnnotationProcessorFactory;
@@ -81,11 +82,13 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 			Template.class.getName(), 
 			Instantiate.class.getName(),
 			Param.class.getName(),
+			Value.class.getName(),
 			Property.class.getName(),
 			TemplatesPrimitives.class.getName(),
-			TemplatesHelper.class.getName(),
+			TemplatesPrimitives.class.getName(),
+			ParamConstructor.class.getName(),
 			//Array.class.getName(),
-			TemplatesHelper.class.getName(), 
+			TemplatesPrimitives.class.getName(), 
 			Include.class.getName(),
 			Includes.class.getName()
 		});
