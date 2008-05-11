@@ -22,12 +22,15 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Random;
 
-import com.ochafik.lang.jeneral.Array;
-import com.ochafik.lang.jeneral.Templates;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Template;
+import com.ochafik.lang.jeneral.runtime.Array;
+import com.ochafik.lang.jeneral.runtime.Fields;
+import com.ochafik.lang.jeneral.runtime.Methods;
+import com.ochafik.lang.jeneral.runtime.ReflectionException;
 
 
 //////////////////////////////////////////////////
@@ -844,35 +847,38 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         return list;
     }*/
 
-    //@Methods
-    interface Primitives<E> {
-    	abstract E maxValue();
-    }
-    
-    //@Initializer
-    //public static abstract NumberLike<E> {
-    //	
-    //}
-    
     /**
      * Finds the maximum value in the list.
      *
      * @return the largest value in the list.
      * @exception IllegalStateException if the list is empty
      */
-//    public E max() {
-//        if (size() == 0) {
-//            throw new IllegalStateException("cannot find maximum of an empty list");
-//        }
-//        //if (E().isPrimitive()) {
-//        E max = #EMIN#;
-//        for (int i = 0; i < _pos; i++ ) {
-//        	if ( _data.get(i) > max ) {
-//        		max = _data.get(i);
-//        	}
-//        }
-//        return max;
-//    }
+    public E max() {
+        if (size() == 0) {
+            throw new IllegalStateException("cannot find maximum of an empty list");
+        }
+        if (E().isPrimitive()) {
+        	try {
+				E max = (E)Fields.getStatic(E(), "MIN_VALUE");
+				for (int i = 0; i < _pos; i++ ) {
+		        	if ( _data.get(i).compareTo(max) > 0 ) {
+		        		max = _data.get(i);
+		        	}
+		        }
+		        return max;
+			} catch (ReflectionException e) {
+				throw new RuntimeException(e);
+			}
+        } else {
+        	E max = neutral_E();
+        	for (int i = 0; i < _pos; i++ ) {
+	        	if (max == neutral_E() || _data.get(i).compareTo(max) > 0 ) {
+	        		max = _data.get(i);
+	        	}
+	        }
+	        return max;
+        }
+    }
 
     /**
      * Finds the minimum value in the list.
@@ -880,18 +886,32 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
      * @return the smallest value in the list.
      * @exception IllegalStateException if the list is empty
      */
-//    public E min() {
-//        if (size() == 0) {
-//            throw new IllegalStateException("cannot find minimum of an empty list");
-//        }
-//        E min = #EMAX#;
-//        for (int i = 0; i < _pos; i++ ) {
-//        	if ( _data.get(i) < min ) {
-//        		min = _data.get(i);
-//        	}
-//        }
-//        return min;
-//    }
+    public E min() {
+        if (size() == 0) {
+            throw new IllegalStateException("cannot find minimum of an empty list");
+        }
+        if (E().isPrimitive()) {
+        	try {
+				E min = (E)Fields.getStatic(E(), "MAX_VALUE");
+				for (int i = 0; i < _pos; i++ ) {
+		        	if ( _data.get(i).compareTo(min) < 0 ) {
+		        		min = _data.get(i);
+		        	}
+		        }
+		        return min;
+			} catch (ReflectionException e) {
+				throw new RuntimeException(e);
+			}
+        } else {
+        	E min = neutral_E();
+        	for (int i = 0; i < _pos; i++ ) {
+	        	if (min == neutral_E() || _data.get(i).compareTo(min) < 0 ) {
+	        		min = _data.get(i);
+	        	}
+	        }
+	        return min;
+        }
+    }
 
     // stringification
 
@@ -913,23 +933,6 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         return buf.toString();
     }
 
-    static int MYMEMBER;
-    static int MYMEMBER() { return 0; }
-    
-    @interface Specialization { Class<?>[] params(); }
-    @interface Inline {}
-    @Specialization(params = {Templates.PrimitiveTypes.class})
-    abstract class PrimitiveSpecialization<E> 
-    {
-    	// Declare a static member
-    	public abstract E MAX_VALUE(Class<E> target);
-    	
-    	/**
-    	Velocity script that will generte the method body 
-    	*/
-    	@Inline
-    	public abstract void writeExternal(E target, ObjectOutput out) throws IOException;
-    }
     public void writeExternal( ObjectOutput out ) throws IOException {
     	// VERSION
     	out.writeByte( 0 );
@@ -941,8 +944,17 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
     	int len = _data.length();
     	out.writeInt( len );
     	for( int i = 0; i < len; i++ ) {
+    		try {
+				Methods.invokeStatic(E(), "write" + E().getName(), out, _data.get(i));
+    		} catch (InvocationTargetException ex) {
+    			if (ex.getCause() instanceof IOException)
+    				throw (IOException)ex.getCause();
+    			
+    		} catch (Throwable e) {
+    			throw new RuntimeException(e);
+			}
     		//out.writeE( _data.get(i) );
-    		out.writeObject( _data.get(i) );
+    		//out.writeObject( _data.get(i) );
     	}
     }
 

@@ -55,12 +55,6 @@ import org.apache.velocity.runtime.log.LogChute;
 import com.ochafik.admin.JavaParsingUtils;
 import com.ochafik.admin.velocity.IOTool;
 import com.ochafik.io.ReadText;
-import com.ochafik.lang.jeneral.AbstractTemplateClass;
-import com.ochafik.lang.jeneral.Array;
-import com.ochafik.lang.jeneral.ReificationUtils;
-import com.ochafik.lang.jeneral.TemplateClass;
-import com.ochafik.lang.jeneral.TemplateContractViolationException;
-import com.ochafik.lang.jeneral.TemplateInstance;
 import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
 import com.ochafik.lang.jeneral.annotations.Instantiate;
@@ -68,8 +62,14 @@ import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
-import com.ochafik.lang.jeneral.annotations.TemplatesHelper;
+import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.annotations.Value;
+import com.ochafik.lang.jeneral.runtime.AbstractTemplateClass;
+import com.ochafik.lang.jeneral.runtime.Array;
+import com.ochafik.lang.jeneral.runtime.ReificationUtils;
+import com.ochafik.lang.jeneral.runtime.TemplateClass;
+import com.ochafik.lang.jeneral.runtime.TemplateContractViolationException;
+import com.ochafik.lang.jeneral.runtime.TemplateInstance;
 import com.ochafik.util.CompoundCollection;
 import com.ochafik.util.listenable.Pair;
 import com.ochafik.util.string.RegexUtils;
@@ -93,7 +93,7 @@ import com.sun.mirror.util.SourcePosition;
 
 /*
 cd /Users/ochafik/Prog/Java && rm templates_logs.txt >/dev/null ; 
-apt -cp classes -factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory -d classes/ -s sources/.apt_generated/ -sourcepath sources:sources/.apt_generated sources/com/ochafik/lang/jeneral/examples/*.java
+apt -cp classes:libraries/velocity.jar:libraries/spoon.jar -factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory -d classes/ -s sources/.apt_generated/ -sourcepath sources:sources/.apt_generated sources/com/ochafik/lang/jeneral/examples/*.java
  && open templates_logs.txt
  */
 public class TemplateProcessor extends AbstractProcessor {
@@ -106,7 +106,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private Class<?>[] deps = array(
 		ReificationUtils.class,
 		TemplateInstance.class,
-		TemplatesHelper.class,
+		TemplatesPrimitives.class,
 		Includes.class,
 		Include.class,
 		Instantiate.class,
@@ -525,7 +525,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		/// Now generate the template interface + implementation with factory methods
 		generateTemplateInterfaceAndImplementation(templateInfo);
 		
-		instantiationTest(templateInfo);
+		//instantiationTest(templateInfo);
 	}
 
 	private void instantiationTest(TemplateInfo templateInfo) throws IOException {

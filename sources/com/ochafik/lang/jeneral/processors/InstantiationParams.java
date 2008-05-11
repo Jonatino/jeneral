@@ -4,18 +4,22 @@
 package com.ochafik.lang.jeneral.processors;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.ochafik.util.listenable.Pair;
 
 public class InstantiationParams implements Comparable<InstantiationParams> {
 	public String templateQualifiedName;
 	public File templateFile;
-	public Map<String, Object> templateParameters =  new HashMap<String, Object>();
+	List<Pair<String, Object>> templateParameters  = new ArrayList<Pair<String, Object>>();
+	//public Map<String, Object> templateParameters =  new HashMap<String, Object>();
 	public String overriddenSimpleName;
 	
-	public InstantiationParams(String qualifiedName, File templateFile) {
+	public InstantiationParams(String qualifiedName) {
 		this.templateQualifiedName = qualifiedName;
-		this.templateFile = templateFile;
 	}
 	public int compareTo(InstantiationParams other) {
 		return toString().compareTo(other.toString());

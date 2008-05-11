@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
+import java.util.TreeSet;
 
 import spoon.processing.Builder;
 import spoon.reflect.Factory;
@@ -12,6 +13,8 @@ import spoon.support.RuntimeProcessingManager;
 import spoon.support.StandardEnvironment;
 
 import com.ochafik.lang.jeneral.examples.ElementsBuilder;
+import com.ochafik.lang.jeneral.examples.PArrayList;
+import com.ochafik.util.listenable.Pair;
 
 public class InstantiationUtils {
 	public static String getTemplateInterfaceQualifiedName(String qualName) {
@@ -32,7 +35,7 @@ public class InstantiationUtils {
 		final InstantiationParams instantiationParams;
 		String qualifiedName;
 		String sourceCode;
-		Set<InstantiationParams> cascadedInstantiations;
+		Set<InstantiationParams> cascadedInstantiations = new TreeSet<InstantiationParams>();
 		public InstantiationResult(InstantiationParams instantiationParams) {
 			this.instantiationParams = instantiationParams;
 		}
@@ -73,9 +76,12 @@ public class InstantiationUtils {
 			File sourcePath = new File("/Users/ochafik/Prog/Java/sources");
 			//File aptSourcePath = new File("/Users/ochafik/Prog/Java/sources/.apt_generated");
 			
-			String className = ElementsBuilder.class.getName();
-			InstantiationParams params = new InstantiationParams(className, getSourceFile(className, sourcePath));
-			params.templateParameters.put("T", Integer.TYPE);
+			//String className = ElementsBuilder.class.getName();
+			String className = PArrayList.class.getName();
+			InstantiationParams params = new InstantiationParams(className);
+			params.templateFile = getSourceFile(className, sourcePath);
+			params.templateParameters.add(new Pair<String, Object>(null, Integer.TYPE));
+			//params.templateParameters.put("E", Integer.TYPE);
 			params.templateFile = getSourceFile(className, sourcePath);
 			params.templateQualifiedName = className;
 			//params.templateParameters.put("T", JLabel.class);
@@ -86,7 +92,7 @@ public class InstantiationUtils {
 				System.out.println("RESULT for " + result.qualifiedName);
 				System.out.println(result.sourceCode);
 				System.out.println();
-				System.out.println();
+				System.out.println(result.cascadedInstantiations);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
