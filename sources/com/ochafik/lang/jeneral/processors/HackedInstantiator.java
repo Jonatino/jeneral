@@ -17,10 +17,10 @@ import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 apt -s sources/.apt_generated/ -factorypath bin/jeneral.jar -cp bin/jeneral.jar -sourcepath sources/:sources/.apt_generated/ sources/com/ochafik/lang/jeneral/examples/ElementsBuilder.java
 
  */
-public class Instantiator {
+public class HackedInstantiator {
 	TemplateProcessor.TemplateInfo templateInfo;
 	AnnotationProcessorEnvironment env;
-	public Instantiator(AnnotationProcessorEnvironment env, TemplateProcessor.TemplateInfo templateInfo) {
+	public HackedInstantiator(AnnotationProcessorEnvironment env, TemplateProcessor.TemplateInfo templateInfo) {
 		this.templateInfo = templateInfo;
 		this.env = env;
 	}
