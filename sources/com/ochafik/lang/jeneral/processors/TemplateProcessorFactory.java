@@ -19,6 +19,10 @@
 */
 package com.ochafik.lang.jeneral.processors;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,6 +48,27 @@ include META-INF/services/com.sun.mirror.apt.AnnotationProcessorFactory
 // apt -cp sources:classes -factory com.ochafik.lang.jeneral.TemplateProcessorFactory -d classes/ -s sources/.apt_generated2 sources/DefaultPackageTemplate.java
 public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 
+	PrintWriter pout;
+	protected PrintWriter getLogger() {
+		if (pout == null) {
+			try {
+				pout = new PrintWriter(new FileWriter(new File("/Users/ochafik/Prog/Java/templates_factory_logs.txt"), true));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return pout;
+	}
+	
+	public TemplateProcessorFactory() {
+		log("new TemplateProcessorFactory");
+	}
+	
+	protected void log(Object o) {
+		getLogger().println(o);
+		getLogger().flush();
+	}
+	
 	public AnnotationProcessor getProcessorFor(
 			Set<AnnotationTypeDeclaration> atds,
 			AnnotationProcessorEnvironment env) {

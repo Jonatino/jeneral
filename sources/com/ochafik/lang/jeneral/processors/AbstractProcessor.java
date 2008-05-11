@@ -61,7 +61,7 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 	protected PrintWriter getLogger() {
 		if (pout == null) {
 			try {
-				pout = new PrintWriter(new FileWriter(new File("/Users/ochafik/Prog/Java/templates_logs.txt")));
+				pout = new PrintWriter(new FileWriter(new File("/Users/ochafik/Prog/Java/templates_logs.txt"), true));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
