@@ -1,7 +1,8 @@
 package com.ochafik.lang.jeneral.examples;
 
 public class UsefulMethods {
-	int aField;
+	int aField = 10;
+	int anotherField = 20;
 	
 	/// Comments for aMethod
 	public void aMethod() {
