@@ -29,29 +29,29 @@ import java.lang.reflect.Array;
 public class Templates {
 	@Documented
 	@Retention(RetentionPolicy.RUNTIME)
-	@Target({ElementType.METHOD, ElementType.FIELD})
-	public @interface TemplatesPrimitive {}
+	//@Target({ElementType.METHOD, ElementType.FIELD})
+	public @interface TemplatesPrimitives {}
 
 	public final class PrimitiveTypes {}
 	
 	@SuppressWarnings("unchecked")
-	@TemplatesPrimitive
+	@TemplatesPrimitives
 	public static final <T> Class<T> getClass(T value) { 
 		return (Class<T>)(value == null ? null : value.getClass()); 
 	}
 	
-	@TemplatesPrimitive
+	@TemplatesPrimitives
 	public static final <T> boolean isPrimitive(T value) { 
 		return false; 
 	}
 	
-	@TemplatesPrimitive
+	@TemplatesPrimitives
 	public static final <T> T newObject(Class<T> classe) throws Exception {
 		return (T)classe.newInstance();
 	}
 	
 	@SuppressWarnings("unchecked")
-	@TemplatesPrimitive
+	@TemplatesPrimitives
 	public static final <T> T[] newArray(Class<T> componentType, int size) {
 		return (T[]) Array.newInstance(componentType, size);
 	}

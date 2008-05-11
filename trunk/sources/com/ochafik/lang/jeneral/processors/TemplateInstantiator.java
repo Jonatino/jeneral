@@ -181,6 +181,55 @@ public class TemplateInstantiator extends AbstractProcessor<CtClass<?>> {
 			replacedTypeInfos.put(formalParamRef, new ReplacedTypeInfo(formalParamRef, formalParamValue));
 		}
 		
+		/// Replace Class<T> methods
+		for (CtInvocation<?> invocation : Query.getElements(ctClass, typeFilter(CtInvocation.class))) {
+			String exeSimpleName = invocation.getExecutable().getSimpleName();
+			List<CtExpression<?>> args = invocation.getArguments();
+			CtExpression<?> target = invocation.getTarget();
+			if (target != null) {
+				/// Replace Array.set(int, T), .get(int) and length()
+				int nArgs = args.size();
+				CtTypeReference<?> targetFormalParamType = getFormalParamClassType(target.getType());
+				if (targetFormalParamType != null) {
+					ReplacedTypeInfo replacedTypeInfo = replacedTypeInfos.get(targetFormalParamType);
+					CtElement parent = invocation.getParent();
+					if (replacedTypeInfo != null && (parent instanceof CtInvocation)) {
+						CtInvocation parentInvocation = (CtInvocation)parent;
+						List<CtExpression<?>> parentArgs = parentInvocation.getArguments();
+						if (parentArgs.size() > 0) {
+							CtExpression memberInvocationTarget = parentArgs.get(0);
+							String parentExeSimpleName = parentInvocation.getExecutable().getSimpleName();
+							if (parentExeSimpleName.equals("get") && exeSimpleName.equals("getField") && nArgs == 1 && parentArgs.size() == 1) {
+								CtExpression fieldName = args.get(0);
+								if (fieldName instanceof CtLiteral) {
+									String fieldNameStr = ((CtLiteral)fieldName).getValue().toString();
+									if ((memberInvocationTarget instanceof CtLiteral) && ((CtLiteral)memberInvocationTarget).getValue() == null)
+										parentInvocation.replace(newSnippet(getObjectWrapper(replacedTypeInfo.classReplacement).getName() + "." + fieldNameStr));
+									else
+										parentInvocation.replace(newSnippet(memberInvocationTarget + "." + fieldNameStr));
+									continue;
+								}
+							} /*else if (parentExeSimpleName.equals("get") && exeSimpleName.equals("getMethod") && nArgs == 1) {
+								CtExpression methodName = args.get(0);
+								if (fieldName instanceof CtLiteral) {
+									String fieldNameStr = ((CtLiteral)fieldName).getValue().toString();
+									if ((memberInvocationTarget instanceof CtLiteral) && ((CtLiteral)memberInvocationTarget).getValue() == null)
+										parentInvocation.replace(newSnippet(getObjectWrapper(replacedTypeInfo.classReplacement).getName() + "." + fieldNameStr));
+									else
+										parentInvocation.replace(newSnippet(memberInvocationTarget + "." + fieldNameStr));
+									continue;
+								}
+								//invocation.replace(newArrayAccess(target, (CtExpression<Integer>)args.get(0)));
+								continue;
+							}*/
+						}
+					}
+				}
+			}
+		}
+		
+		
+		/// Replace Array<T> methods
 		for (CtInvocation<?> invocation : Query.getElements(ctClass, typeFilter(CtInvocation.class))) {
 			String exeSimpleName = invocation.getExecutable().getSimpleName();
 			List<CtExpression<?>> args = invocation.getArguments();
@@ -333,14 +382,7 @@ public class TemplateInstantiator extends AbstractProcessor<CtClass<?>> {
 				typedElementType.setActualTypeArguments(replacedTypeArgs);
 			}
 		}
-		
-		/// Remove non-necessary casts
-		/*for (CtAccess<?> fieldAccess : Query.getElements(ctClass, typeFilter(CtFieldAccess.class))) {
-			CtTypeReference<?> ref = fieldAccess.getVariable().getDeclaringType();
-			if (ref != null && ref.getQualifiedName().equals(templateClassName))
-				fieldAccess.getVariable().setDeclaringType(decoratedRef);
-		}*/
-		
+
 		/// Change name of class to decorated instantiation name
 		if (instantiationParams.overriddenSimpleName == null) {
 			ctClass.setSimpleName(decorateName(ctClass, instantiationParams.templateParameters));
@@ -374,6 +416,12 @@ public class TemplateInstantiator extends AbstractProcessor<CtClass<?>> {
 		results.add(result);
 	}
 	
+	private Class getObjectWrapper(Class<?> classReplacement) {
+		if (classReplacement.isPrimitive())
+			return primitiveToWrapperClass.get(classReplacement.getName());
+		return classReplacement;
+	}
+
 	CtTypeReference<?> integerType, intType;
 	public CtTypeReference<?> getIntegerType() {
 		if (integerType == null)
@@ -555,6 +603,15 @@ public class TemplateInstantiator extends AbstractProcessor<CtClass<?>> {
 
 	private CtTypeReference<?> getFormalParamArrayType(CtTypeReference<?> type) {
 		if (type != null && type.getQualifiedName().equals(Array.class.getName())) {
+			List<CtTypeReference<?>> typeArguments = type.getActualTypeArguments();
+			if (typeArguments.size() == 1) {
+				return typeArguments.get(0);
+			}
+		}
+		return null;
+	}
+	private CtTypeReference<?> getFormalParamClassType(CtTypeReference<?> type) {
+		if (type != null && type.getQualifiedName().equals(Class.class.getName())) {
 			List<CtTypeReference<?>> typeArguments = type.getActualTypeArguments();
 			if (typeArguments.size() == 1) {
 				return typeArguments.get(0);

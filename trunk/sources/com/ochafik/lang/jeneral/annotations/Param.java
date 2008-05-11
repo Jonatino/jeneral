@@ -30,6 +30,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 public @interface Param {
 	String name() default "";
-	//Class<?> type() default Class.class;
 	Value value();
 }

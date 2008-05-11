@@ -122,6 +122,13 @@ public abstract class TArray<T extends Comparable<T>, U, V, W> implements _TArra
       if (array.length() == 0)
           throw new IllegalStateException("cannot find minimum of an empty list");
       
+      try {
+		T().getField("MAX_VALUE").get(null);
+		T().getMethod("MAX_VALUE").invoke(null);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+      
       MinMaxContract<T> minMaxContract = MinMaxContract_Contract.Contract.getContract(T());
       if (minMaxContract != null) {
     	  T min = minMaxContract.getFields().MAX_VALUE();
