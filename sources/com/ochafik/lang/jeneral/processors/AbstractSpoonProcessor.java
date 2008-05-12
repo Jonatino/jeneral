@@ -114,16 +114,20 @@ public abstract class AbstractSpoonProcessor<E extends CtElement> extends Abstra
 
 	public CtElement classAccess(Class<?> type, CtTypeReference<?> paramRefReplacement) {
 		if (type.isPrimitive()) {
-			return newSnippet(primitiveToClassAccess.get(type.getName()));
-			/*try {
+			//return newSnippet(primitiveToClassAccess.get(type.getName()));
+			try {
 				Class<?> wrapper = getPrimitiveWrapper(type);
 				CtFieldReference field = Field().createReference(wrapper.getField("TYPE"));
 				CtFieldAccess<Object> fieldAccess = Core().createFieldAccess();
+				//fieldAccess.set.setFinal(true);
+				field.setFinal(true);
+				field.setStatic(true);
 				fieldAccess.setVariable(field);
 				//Core().createt
 				//fieldAccess.setTarget(Code().createClassAccess(Type().createReference(wrapper)));
 				fieldAccess.setImplicit(false);
 				fieldAccess.setType((CtTypeReference)Type().createReference(Class.class));
+				
 				//fieldAccess.set
 				//return Code().createVariableAccess(field, true);
 				return fieldAccess;
@@ -136,7 +140,7 @@ public abstract class AbstractSpoonProcessor<E extends CtElement> extends Abstra
 				//return access;
 			} catch (Exception e) {
 				throw new RuntimeException(e);
-			}*/
+			}
 		} else
 			return Code().createClassAccess(paramRefReplacement);
 	}

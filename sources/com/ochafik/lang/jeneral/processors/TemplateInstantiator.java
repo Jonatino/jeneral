@@ -3,8 +3,10 @@ package com.ochafik.lang.jeneral.processors;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,6 +42,7 @@ import spoon.reflect.eval.SymbolicInstance;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtFieldReference;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.CtStackScanner;
 import spoon.reflect.visitor.Query;
 import spoon.support.reflect.eval.VisitorSymbolicEvaluator;
@@ -56,6 +59,7 @@ import com.ochafik.lang.jeneral.runtime.ReflectionException;
 import com.ochafik.lang.jeneral.runtime.TemplateContractViolationException;
 import com.ochafik.util.listenable.Pair;
 import com.ochafik.util.string.StringUtils;
+import com.sun.tools.javac.tree.Tree.Modifiers;
 
 public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 	List<CtParameter<?>> noParams = new ArrayList<CtParameter<?>>();
@@ -146,6 +150,9 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 	
 	@SuppressWarnings("unchecked")
 	public void process(CtClass<?> ctClass) {
+		for (CtMethod m : ctClass.getMethods()) {
+			m = null;
+		}
 		Template templateAnnotation = getAndRemoveAnnotation(ctClass, Template.class);
 		if (templateAnnotation == null)
 			return;
@@ -170,7 +177,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		replaceTAndTArrayTypes(ctClass, replacedTypeInfos, result);
 		//replaceMethodsInvokingMethods(ctClass);
 		
-		//new EvaluationVisitor().scan(ctClass);
+		new EvaluationVisitor().scan(ctClass);
 		/*for (CtMethod meth : ctClass.getMethods()) {
 			try {
 				//CtBlock evaluatedMethod = evaluator.evaluate(meth, meth.getBody());
@@ -195,17 +202,17 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 	}
 	
 	//class MyEval extends 
-	class EvaluationVisitor extends CtStackScanner {
+	class EvaluationVisitor extends CtScanner {
 		
 		SymbolicEvaluator evaluator = Eval().createSymbolicEvaluator();
 		
 		@Override
 		protected void exit(CtElement e) {
-			super.exit(e);
+			/*super.exit(e);
 			if (elementStack.isEmpty())
 				for (Map.Entry<CtElement, CtElement> replacement : replacements.entrySet()) {
 					replacement.getKey().replace(replacement.getValue());
-				}
+				}*/
 		}
 		boolean acceptableEvalReturnValue(Class<?> expression) {
 			//if (expression instanceof )
@@ -247,8 +254,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		@Override
 		public <T> void visitCtBinaryOperator(CtBinaryOperator<T> operator) {
 			super.visitCtBinaryOperator(operator);
-			//if (true)
-			//	return;
+			//if (true) return;
 			
 			if (operator.getKind() == BinaryOperatorKind.PLUS) {
 				CtExpression<?> left = operator.getLeftHandOperand();
@@ -259,13 +265,23 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 					Object lv = ((CtLiteral<?>)left).getValue(), rv = ((CtLiteral<?>)right).getValue();
 					if (lv != null && (lv instanceof String) && rv != null && (rv instanceof String)) {
 						CtLiteral<String> result = Code().createLiteral(((String)lv) + ((String)rv));
-						replacements.put(operator, result);
-						//operator.replace(result);
+						//replacements.put(operator, result);
+						operator.replace(result);
 						//super.visitCtLiteral(result);
 					}
 				}
 			}
 		}
+		@Override
+		public void scan(Collection<? extends CtElement> elements) {
+			if ((elements != null)) {
+				for (CtElement e : new ArrayList<CtElement>(elements)) {
+					scan(e);
+				}
+			}
+
+		}
+
 		@Override
 		public <T> void visitCtInvocation(CtInvocation<T> invocation) {
 			super.visitCtInvocation(invocation);
@@ -277,14 +293,24 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 			System.out.println("Invocation = " + invocation);
 			
 			List<CtExpression<?>> arguments = invocation.getArguments();
+			Class[] argsTypes = new Class[arguments.size()];
 			Object[] evaluatedArguments = new Object[arguments.size()];
 			for (int i = 0, len = evaluatedArguments.length; i < len; i++) {
 				CtExpression<?> argument = arguments.get(i);
 				if (!acceptableEvalReturnValue(argument))
 					return;
 				
+				CtTypeReference argTypeRef = argument.getType();
+				
 				try {
 					evaluatedArguments[i] = eval(argument);
+					if (argTypeRef != null)
+						argsTypes[i] = argTypeRef.getActualClass();
+					else if (evaluatedArguments[i] != null)
+						argsTypes[i] = evaluatedArguments[i].getClass();
+					else
+						argsTypes[i] = Object.class;
+					
 				} catch (Exception e) {
 					return;
 				}
@@ -292,8 +318,19 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 			
 			try {
 				Class<?> class1 = Class.forName(exe.getDeclaringType().getQualifiedName());
-				if (class1 != null)
-					invocation.replace(Code().createLiteral(Methods.invokeStatic(class1, exe.getSimpleName(), evaluatedArguments)));
+				if (class1 != null) {
+					//Method m = class1.getMethod(exe.getSimpleName(), argsTypes);
+					//invocation.replace(Code().createLiteral(m.invoke(null, evaluatedArguments)));
+					//invocation.replace(Code().createLiteral(Methods.invokeStatic(class1, exe.getSimpleName(), argsTypes, evaluatedArguments)));
+					Method m = Methods.getMethodForArgs(class1, exe.getSimpleName(), evaluatedArguments);
+					if ((m.getModifiers() & Modifier.STATIC) != 0) {
+						invocation.replace(Code().createLiteral(Methods.invokeStatic(class1, exe.getSimpleName(), evaluatedArguments)));
+					} else {
+						invocation.replace(Code().createLiteral(Methods.invoke(class1, exe.getSimpleName(), evaluatedArguments)));
+					}
+					
+				}
+					
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -347,6 +384,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 	/// Replace Class<T> methods
 	@SuppressWarnings("unchecked")
 	private void replaceClassTMethods(CtClass<?> ctClass, Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos) {
+		//TODO make this work for any kind of classes
 		for (CtInvocation<?> invocation : Query.getElements(ctClass, typeFilter(CtInvocation.class))) {
 			String exeSimpleName = invocation.getExecutable().getSimpleName();
 			List<CtExpression<?>> args = invocation.getArguments();
