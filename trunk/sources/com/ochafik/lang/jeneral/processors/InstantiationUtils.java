@@ -15,6 +15,7 @@ import spoon.support.StandardEnvironment;
 import com.ochafik.lang.jeneral.examples.ElementsBuilder;
 import com.ochafik.lang.jeneral.examples.EvalExample;
 import com.ochafik.lang.jeneral.examples.PArrayList;
+import com.ochafik.lang.jeneral.examples.Testt;
 import com.ochafik.util.listenable.Pair;
 
 public class InstantiationUtils {
@@ -80,6 +81,7 @@ public class InstantiationUtils {
 			//String className = ElementsBuilder.class.getName();
 			//String className = PArrayList.class.getName();
 			String className = EvalExample.class.getName();
+			//String className = Testt.class.getName();
 			InstantiationParams params = new InstantiationParams(className);
 			params.templateFile = getSourceFile(className, sourcePath);
 			params.templateParameters.add(new Pair<String, Object>(null, Integer.TYPE));

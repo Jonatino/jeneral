@@ -1,5 +1,6 @@
 package com.ochafik.lang.jeneral.runtime;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -17,6 +18,24 @@ import com.ochafik.util.string.StringUtils;
 
 public class Methods {
 
+	public static Object[] getArgsWithVarArgs(Method m, Object[] args) {
+		Class<?>[] params = m.getParameterTypes();
+		int nParams = params.length;
+		boolean hasVarArgs = nParams > 0 && params[nParams - 1].isArray();
+		if (!hasVarArgs)
+			return args;
+		
+		Object[] ret = new Object[params.length];
+		System.arraycopy(args, 0, ret, 0, nParams - 1);
+		int nVarArgs = args.length - (nParams - 1);
+		Object varArgs = Array.newInstance(params[nParams - 1].getComponentType(), nVarArgs);
+		for (int i = 0; i < nVarArgs; i++) {
+			Array.set(varArgs, i, args[nParams - 1 + i]);
+		}
+		ret[nParams - 1] = varArgs;
+		
+		return ret;
+	}
 	public static Method getMethodForArgs(Class<?> c, String name, Object... args) throws ReflectionException {
 		int nArgs = args.length;
 		for (Method m : c.getMethods()) {
@@ -24,11 +43,13 @@ public class Methods {
 				continue;
 			
 			Class<?>[] params = m.getParameterTypes();
-			if (params.length != nArgs)
+			int nParams = params.length;
+			boolean hasVarArgs = nParams > 0 && params[nParams - 1].isArray();
+			if ((!hasVarArgs && nArgs != nParams) || nArgs < nParams - 1)
 				continue;
 			
 			boolean matches = true;
-			for (int i = nArgs; i-- != 0;) {
+			for (int i = 0, len = (hasVarArgs ? nParams - 1 : nParams); i < len; i++) {
 				Class<?> param = params[i];
 				Object arg = args[i];
 				if (arg == null) {
@@ -40,6 +61,23 @@ public class Methods {
 					if (!param.isAssignableFrom(arg.getClass())) {
 						matches = false;
 						break;
+					}
+				}
+			}
+			if (hasVarArgs) {
+				Class<?> varType = params[nParams - 1].getComponentType();
+				for (int i = nParams - 1; i < nArgs; i++) {
+					Object arg = args[i];
+					if (arg == null) {
+						if (varType.isPrimitive()) {
+							matches = false;
+							break;
+						} 
+					} else {
+						if (!varType.isAssignableFrom(arg.getClass())) {
+							matches = false;
+							break;
+						}
 					}
 				}
 			}
@@ -55,16 +93,28 @@ public class Methods {
 				continue;
 			
 			Class<?>[] params = m.getParameterTypes();
-			if (params.length != nArgs)
+			int nParams = params.length;
+			boolean hasVarArgs = nParams > 0 && params[nParams - 1].isArray();
+			if ((!hasVarArgs && nArgs != nParams) || nArgs < nParams - 1)
 				continue;
 			
 			boolean matches = true;
-			for (int i = nArgs; i-- != 0;) {
+			for (int i = 0, len = (hasVarArgs ? nParams - 1 : nParams); i < len; i++) {
 				Class<?> param = params[i];
 				Class<?> arg = args[i];
 				if (!param.isAssignableFrom(arg)) {
 					matches = false;
 					break;
+				}
+			}
+			if (hasVarArgs) {
+				Class<?> varType = params[nParams - 1].getComponentType();
+				for (int i = nParams - 1; i < nArgs; i++) {
+					Class<?> arg = args[i];
+					if (!varType.isAssignableFrom(arg)) {
+						matches = false;
+						break;
+					}
 				}
 			}
 			if (matches)
@@ -106,7 +156,9 @@ public class Methods {
 	@Inlinable(inliner = StaticInvokeInliner.class, tag = "1")
 	public static Object invokeStatic(Class<?> c, String name, Class[] argTypes, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
-			return c.getMethod(name, argTypes).invoke(null, params);
+			Method m = getMethodForArgTypes(c, name, argTypes);
+			return m.invoke(null, getArgsWithVarArgs(m, params));
+			//return c.getMethod(name, argTypes).invoke(null, params);
 		} catch (InvocationTargetException ex) {
 			throw ex;
 		} catch (Exception e) {
@@ -118,7 +170,8 @@ public class Methods {
 	@Inlinable(inliner = StaticInvokeInliner.class, tag = "2")
 	public static Object invokeStatic(Class<?> c, String name, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
-			return getMethodForArgs(c, name, params).invoke(null, params);
+			Method m = getMethodForArgs(c, name, params);
+			return m.invoke(null, getArgsWithVarArgs(m, params));
 		} catch (InvocationTargetException ex) {
 			throw ex;
 		} catch (ReflectionException e) {
@@ -133,7 +186,9 @@ public class Methods {
 	@TemplatesPrimitives
 	public static Object invoke(Object o, String name, Class[] argTypes, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
-			return o.getClass().getMethod(name, argTypes).invoke(o, params);
+			Method m = getMethodForArgTypes(o.getClass(), name, argTypes);
+			return m.invoke(o, getArgsWithVarArgs(m, params));
+			//return o.getClass().getMethod(name, argTypes).invoke(o, params);
 		} catch (InvocationTargetException ex) {
 			throw ex;
 		} catch (Exception e) {
@@ -144,7 +199,8 @@ public class Methods {
 	@TemplatesPrimitives
 	public static Object invoke(Object o, String name, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
-			return getMethodForArgs(o.getClass(), name, params).invoke(o, params);
+			Method m = getMethodForArgs(o.getClass(), name, params);
+			return m.invoke(o, getArgsWithVarArgs(m, params));
 		} catch (InvocationTargetException ex) {
 			throw ex;
 		} catch (ReflectionException e) {
