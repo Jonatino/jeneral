@@ -13,6 +13,7 @@ import spoon.support.RuntimeProcessingManager;
 import spoon.support.StandardEnvironment;
 
 import com.ochafik.lang.jeneral.examples.ElementsBuilder;
+import com.ochafik.lang.jeneral.examples.EvalExample;
 import com.ochafik.lang.jeneral.examples.PArrayList;
 import com.ochafik.util.listenable.Pair;
 
@@ -77,7 +78,8 @@ public class InstantiationUtils {
 			//File aptSourcePath = new File("/Users/ochafik/Prog/Java/sources/.apt_generated");
 			
 			//String className = ElementsBuilder.class.getName();
-			String className = PArrayList.class.getName();
+			//String className = PArrayList.class.getName();
+			String className = EvalExample.class.getName();
 			InstantiationParams params = new InstantiationParams(className);
 			params.templateFile = getSourceFile(className, sourcePath);
 			params.templateParameters.add(new Pair<String, Object>(null, Integer.TYPE));
