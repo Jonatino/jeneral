@@ -859,7 +859,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         }
         if (E().isPrimitive()) {
         	try {
-				E max = (E)Fields.getStatic(E(), "MIN_VALUE");
+				E max = E().cast(Fields.getStatic(E(), "MIN_VALUE"));
 				for (int i = 0; i < _pos; i++ ) {
 		        	if ( _data.get(i).compareTo(max) > 0 ) {
 		        		max = _data.get(i);
@@ -892,7 +892,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         }
         if (E().isPrimitive()) {
         	try {
-				E min = (E)Fields.getStatic(E(), "MAX_VALUE");
+				E min = E().cast(Fields.getStatic(E(), "MAX_VALUE"));
 				for (int i = 0; i < _pos; i++ ) {
 		        	if ( _data.get(i).compareTo(min) < 0 ) {
 		        		min = _data.get(i);
@@ -933,6 +933,14 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         return buf.toString();
     }
 
+    static String capitalize(String s) {
+    	char[] chars = s.toCharArray();
+    	if (chars.length == 0)
+    		return "";
+    	chars[0] = Character.toUpperCase(chars[0]);
+    	return new String(chars); 
+    }
+    
     public void writeExternal( ObjectOutput out ) throws IOException {
     	// VERSION
     	out.writeByte( 0 );
@@ -945,7 +953,9 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
     	out.writeInt( len );
     	for( int i = 0; i < len; i++ ) {
     		try {
-				Methods.invokeStatic(E(), "write" + E().getName(), out, _data.get(i));
+				//Methods.invokeStatic(E(), "write" + E().getName(), out, _data.get(i));
+    			Methods.invokeStatic(E(), "write" + capitalize(E().getName()), out, _data.get(i));
+    			
     		} catch (InvocationTargetException ex) {
     			if (ex.getCause() instanceof IOException)
     				throw (IOException)ex.getCause();

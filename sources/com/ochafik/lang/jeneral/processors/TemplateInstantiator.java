@@ -1,34 +1,26 @@
-/**
- * 
- */
 package com.ochafik.lang.jeneral.processors;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import spoon.processing.AbstractProcessor;
-import spoon.reflect.CoreFactory;
 import spoon.reflect.code.BinaryOperatorKind;
-import spoon.reflect.code.CtArrayAccess;
-import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtBlock;
-import spoon.reflect.code.CtCodeSnippetExpression;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLiteral;
-import spoon.reflect.code.CtNewArray;
-import spoon.reflect.code.CtReturn;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtClass;
@@ -40,22 +32,27 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.factory.CodeFactory;
-import spoon.reflect.factory.FieldFactory;
-import spoon.reflect.factory.MethodFactory;
-import spoon.reflect.factory.TypeFactory;
+import spoon.reflect.eval.PartialEvaluator;
+import spoon.reflect.eval.SymbolicEvaluationStep;
+import spoon.reflect.eval.SymbolicEvaluator;
+import spoon.reflect.eval.SymbolicEvaluatorObserver;
+import spoon.reflect.eval.SymbolicInstance;
+import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtFieldReference;
-import spoon.reflect.reference.CtLocalVariableReference;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.CtStackScanner;
 import spoon.reflect.visitor.Query;
-import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.reflect.eval.VisitorSymbolicEvaluator;
 
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
+import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.processors.InstantiationUtils.InstantiationResult;
 import com.ochafik.lang.jeneral.runtime.Array;
+import com.ochafik.lang.jeneral.runtime.Fields;
 import com.ochafik.lang.jeneral.runtime.Methods;
+import com.ochafik.lang.jeneral.runtime.ReflectionException;
 import com.ochafik.lang.jeneral.runtime.TemplateContractViolationException;
 import com.ochafik.util.listenable.Pair;
 import com.ochafik.util.string.StringUtils;
@@ -137,13 +134,13 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 			if (!(formalParamValue instanceof Class))
 				throw new RuntimeException("Expected class value for template parameter " + formalParamRef.getSimpleName()+". Found " + formalParamValue + " instead.");
 			classReplacement = (Class<?>)formalParamValue;
-			paramRefReplacement = type().createReference(classReplacement);
+			paramRefReplacement = Type().createReference(classReplacement);
 			if (classReplacement.isPrimitive()) {
-				paramObjectRefReplacement = type().createReference(primitiveToWrapperClass.get(classReplacement.getName()));
+				paramObjectRefReplacement = Type().createReference(getPrimitiveWrapper(classReplacement));
 			} else {
 				paramObjectRefReplacement = paramRefReplacement;
 			}
-			paramArrayRefReplacement = type().createArrayReference(paramRefReplacement);
+			paramArrayRefReplacement = Type().createArrayReference(paramRefReplacement);
 		}
 	}
 	
@@ -171,8 +168,23 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		replaceTClassGetterAndArrayCreator(ctClass, replacedTypeInfos);
 		replaceParamConstructors(ctClass, replacedTypeInfos, constructorContracts);
 		replaceTAndTArrayTypes(ctClass, replacedTypeInfos, result);
-
-		removeDeadBlocks(ctClass);
+		//replaceMethodsInvokingMethods(ctClass);
+		
+		//new EvaluationVisitor().scan(ctClass);
+		/*for (CtMethod meth : ctClass.getMethods()) {
+			try {
+				//CtBlock evaluatedMethod = evaluator.evaluate(meth, meth.getBody());
+				SymbolicInstance<?> evaled = evaluator.evaluate(meth.getBody());
+				System.out.println("evaled = " +evaled);
+				//meth.setBody(evaluatedMethod);
+//				evaluatedMethod = Eval().createPartialEvaluator().evaluate(meth, meth.getBody());
+//				meth.setBody(evaluatedMethod);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+		*/
+		//removeDeadBlocks(ctClass);
 		
 		decorateInstantiationClassName(ctClass, instantiationParams, replacedTypeInfos);
 		
@@ -180,6 +192,134 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		result.sourceCode = ctClass.getPackage() + "\n" + ctClass;
 		
 		results.add(result);
+	}
+	
+	//class MyEval extends 
+	class EvaluationVisitor extends CtStackScanner {
+		
+		SymbolicEvaluator evaluator = Eval().createSymbolicEvaluator();
+		
+		@Override
+		protected void exit(CtElement e) {
+			super.exit(e);
+			if (elementStack.isEmpty())
+				for (Map.Entry<CtElement, CtElement> replacement : replacements.entrySet()) {
+					replacement.getKey().replace(replacement.getValue());
+				}
+		}
+		boolean acceptableEvalReturnValue(Class<?> expression) {
+			//if (expression instanceof )
+			return expression == Class.class || expression.isPrimitive() || expression == String.class;
+		}
+		boolean acceptableEvalReturnValue(CtTypedElement<?> e) {
+			if (e instanceof CtLiteral)
+				return true;
+			return acceptableEvalReturnValue(e.getType());
+		}
+		boolean acceptableEvalReturnValue(CtTypeReference<?> c) {
+			if (c == null)
+				return false;
+			
+			String n = c.getQualifiedName();
+			return c.isPrimitive() || 
+				n.equals(Class.class.getName()) || 
+				n.equals(String.class.getName());
+		}
+		
+		boolean hasArgumentsWithAcceptableTypesForEval(CtInvocation<?> invocation) {
+			CtExecutableReference<?> exe = invocation.getExecutable();
+			if (!exe.getModifiers().contains(ModifierKind.STATIC) && acceptableEvalReturnValue(exe.getType()))
+				return false;
+			
+			for (CtExpression<?> argument : invocation.getArguments())
+				if (!acceptableEvalReturnValue(argument))
+					return false;
+			
+			return true;
+		}
+		
+		Map<CtElement, CtElement> replacements = new HashMap<CtElement, CtElement>();
+		
+		//CtTypeReference<?> stringType = Type().createReference(String.class);
+		
+		//CtElement replacement;
+		
+		@Override
+		public <T> void visitCtBinaryOperator(CtBinaryOperator<T> operator) {
+			super.visitCtBinaryOperator(operator);
+			//if (true)
+			//	return;
+			
+			if (operator.getKind() == BinaryOperatorKind.PLUS) {
+				CtExpression<?> left = operator.getLeftHandOperand();
+				CtExpression<?> right = operator.getRightHandOperand();
+				CtTypeReference<?> lt = left.getType(), rt = right.getType();
+				
+				if ((left instanceof CtLiteral) && (right instanceof CtLiteral)) {
+					Object lv = ((CtLiteral<?>)left).getValue(), rv = ((CtLiteral<?>)right).getValue();
+					if (lv != null && (lv instanceof String) && rv != null && (rv instanceof String)) {
+						CtLiteral<String> result = Code().createLiteral(((String)lv) + ((String)rv));
+						replacements.put(operator, result);
+						//operator.replace(result);
+						//super.visitCtLiteral(result);
+					}
+				}
+			}
+		}
+		@Override
+		public <T> void visitCtInvocation(CtInvocation<T> invocation) {
+			super.visitCtInvocation(invocation);
+			
+			if (!hasArgumentsWithAcceptableTypesForEval(invocation))
+				return;
+			
+			CtExecutableReference<T> exe = invocation.getExecutable();
+			System.out.println("Invocation = " + invocation);
+			
+			List<CtExpression<?>> arguments = invocation.getArguments();
+			Object[] evaluatedArguments = new Object[arguments.size()];
+			for (int i = 0, len = evaluatedArguments.length; i < len; i++) {
+				CtExpression<?> argument = arguments.get(i);
+				if (!acceptableEvalReturnValue(argument))
+					return;
+				
+				try {
+					evaluatedArguments[i] = eval(argument);
+				} catch (Exception e) {
+					return;
+				}
+			}
+			
+			try {
+				Class<?> class1 = Class.forName(exe.getDeclaringType().getQualifiedName());
+				if (class1 != null)
+					invocation.replace(Code().createLiteral(Methods.invokeStatic(class1, exe.getSimpleName(), evaluatedArguments)));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		private Object eval(CtExpression<?> argument) throws Exception {
+			if (argument instanceof CtLiteral) {
+				return ((CtLiteral<?>)argument).getValue();
+			} else {
+				SymbolicInstance<?> evaluatedArgument = evaluator.evaluate(argument);
+				CtTypeReference<?> concreteType = evaluatedArgument.getConcreteType();
+				if (concreteType != null && (evaluatedArgument instanceof CtLiteral))
+					return ((CtLiteral<?>)evaluatedArgument).getValue();
+				
+				throw new Exception();
+			}
+		}
+		@Override
+		public void visitCtIf(CtIf ifElement) {
+			//super.visitCtIf(ifElement);
+			
+			CtExpression<Boolean> condition = ifElement.getCondition();
+			if (condition instanceof CtLiteral) {
+				replaceByStatementOrBlockStatements(ifElement, Boolean.TRUE.equals(((CtLiteral<?>)condition).getValue()) ?
+						ifElement.getThenStatement() : ifElement.getElseStatement());
+			}
+		}
 	}
 	
 	/// Build info on replaced types
@@ -253,25 +393,60 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 							}
 						} 
 						if (nArgs == 0) {
-							/// Inline evaluation of noargs-methods of Class<T>
+							/// Inline evaluation of noarg-methods of Class<T>
 							try {
 								Method m = Class.class.getMethod(exeSimpleName);
 								if (m != null && m.getReturnType().isPrimitive() || m.getReturnType() == String.class) {
-									invocation.replace(code().createLiteral(m.invoke(replacedTypeInfo.classReplacement)));
+									invocation.replace(Code().createLiteral(m.invoke(replacedTypeInfo.classReplacement)));
 									continue;
 								}
 							} catch (Exception e) {
 								throw new RuntimeException("Exception during eval of " +replacedTypeInfo+".class." + exeSimpleName + "()", e);
 							}
-						} else if (exeSimpleName.equals("cast") && nArgs == 1) {
-							invocation.replace(newSnippet("(" + replacedTypeInfo.classReplacement.getName()+")" + args.get(0)));
-						}
+						} /*else if (exeSimpleName.equals("cast") && nArgs == 1) {
+							CtExpression casted = args.get(0);
+							casted.setType(replacedTypeInfo.paramRefReplacement);
+							invocation.replace(casted);
+							//invocation.replace(newSnippet("(" + replacedTypeInfo.classReplacement.getName()+")" + args.get(0)));
+						}*/
 					}
 				}
 			}
 		}
 		
+		for (CtInvocation<?> invocation : Query.getElements(ctClass, typeFilter(CtInvocation.class))) {
+			String exeSimpleName = invocation.getExecutable().getSimpleName();
+			List<CtExpression<?>> args = invocation.getArguments();
+			CtExpression<?> target = invocation.getTarget();
+			if (target != null) {
+				/// Replace Array.set(int, T), .get(int) and length()
+				int nArgs = args.size();
+				CtTypeReference<?> targetFormalParamType = getFormalParamClassType(target.getType());
+				if (targetFormalParamType != null) {
+					
+					ReplacedTypeInfo replacedTypeInfo = replacedTypeInfos.get(targetFormalParamType);
+			
+					if (exeSimpleName.equals("cast") && nArgs == 1) {
+						CtExpression casted = args.get(0);
+						casted.setType(replacedTypeInfo.paramRefReplacement);
+						invocation.replace(casted);
+						//invocation.replace(newSnippet("(" + replacedTypeInfo.classReplacement.getName()+")" + args.get(0)));
+					}
+				}
+			}
+		}
 		
+	}
+
+	/// Replace Methods methods
+	@SuppressWarnings("unchecked")
+	private void replaceMethodsInvokingMethods(CtClass<?> ctClass) {
+		InlinerCache inlinerCache = new InlinerCache(getFactory());
+		for (CtInvocation<?> invocation : Query.getElements(ctClass, typeFilter(CtInvocation.class))) {
+			Inliner inliner = inlinerCache.getInliner(invocation.getExecutable().getActualMethod());
+			if (inliner != null)
+				inliner.process(invocation);
+		}
 	}
 
 	/// Change name of class to decorated instantiation name
@@ -462,7 +637,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 			/// Replace compareTo and equals by operators on primitives
 			if (replacedTypeInfo.classReplacement.isPrimitive()) {
 				if (exeSimpleName.equals("equals") && nArgs == 1) {
-					invocation.replace(code().createBinaryOperator(target, args.get(0), BinaryOperatorKind.EQ));
+					invocation.replace(Code().createBinaryOperator(target, args.get(0), BinaryOperatorKind.EQ));
 					continue;
 				} else if (exeSimpleName.equals("compareTo") && nArgs == 1) {
 					if (replaceCompareToInBinaryOperatorByDirectPrimitiveOperator(invocation))
@@ -532,7 +707,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 				case GE:
 				case GT:
 				case NE:
-					parent.replace(code().createBinaryOperator(target, argument, parent.getKind()));
+					parent.replace(Code().createBinaryOperator(target, argument, parent.getKind()));
 					return true;
 				}
 				
@@ -548,7 +723,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 				case GE:
 				case GT:
 				case NE:
-					parent.replace(code().createBinaryOperator(argument, target, parent.getKind()));
+					parent.replace(Code().createBinaryOperator(argument, target, parent.getKind()));
 					return true;
 				}
 				
@@ -650,18 +825,18 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		
 		Set<ModifierKind> pub = Collections.singleton(ModifierKind.PUBLIC);
 		
-		CtFieldReference fieldRef = field().createReference(field);
-		CtFieldAccess fieldAccess = (CtFieldAccess)code().createVariableAccess(fieldRef, false);
+		CtFieldReference fieldRef = Field().createReference(field);
+		CtFieldAccess fieldAccess = (CtFieldAccess)Code().createVariableAccess(fieldRef, false);
 		
 		if (ctClass.getMethod(getterName) == null) {
-			CtMethod getter = method().create(ctClass, pub, field.getType(), getterName, noParams, noExceptions);
+			CtMethod getter = Method().create(ctClass, pub, field.getType(), getterName, noParams, noExceptions);
 			getter.setBody(newBlock(newReturn(fieldAccess)));
 		}
 		
 		if (ctClass.getMethod(setterName, field.getType()) == null) {
 			CtParameter param = newParam(field.getType(), field.getSimpleName());
 			
-			CtMethod setter = method().create(ctClass, pub, field.getType(), setterName, 
+			CtMethod setter = Method().create(ctClass, pub, field.getType(), setterName, 
 					(List)Arrays.asList(param), noExceptions);
 			
 			setter.setBody(newBlock(newFieldAssignment(field, param.getSimpleName())));
