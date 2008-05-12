@@ -113,6 +113,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		Param.class,
 		ParamConstructor.class,
 		Property.class,
+		//TemplateInstantiator.class,
 		Template.class,
 		Value.class
 	);
