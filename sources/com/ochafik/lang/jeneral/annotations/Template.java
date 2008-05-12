@@ -71,7 +71,7 @@ import org.apache.commons.lang.UnhandledException;
  * @author Olivier Chafik
  */
 @Documented
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface Template {
 	Param[] additionalParameters() default {};

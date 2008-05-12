@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import spoon.processing.Severity;
 import spoon.reflect.code.BinaryOperatorKind;
 import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtBlock;
@@ -24,6 +25,7 @@ import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtStatement;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtConstructor;
@@ -116,13 +118,14 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		StringBuilder b = new StringBuilder(ctClass.getSimpleName());
 		for (CtTypeReference<?> ref : ctClass.getFormalTypeParameters()) {
 			b.append("__");
-			Object value = replacedTypeInfos.get(ref);
-			if (value != null) {
-				if (value instanceof Class) {
-					b.append(((Class<?>)value).getSimpleName());
-				} else {
-					b.append(value);
-				}
+			ReplacedTypeInfo replacedTypeInfo = replacedTypeInfos.get(ref);
+			if (replacedTypeInfo != null) {
+				//if (value instanceof Class) {
+//					b.append(((Class<?>)value).getSimpleName());
+//				} else {
+//					b.append(value);
+//				}
+				b.append(replacedTypeInfo.classReplacement.getSimpleName());
 			}	
 		}
 		return b.toString();
@@ -134,8 +137,9 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		public final CtTypeReference<?> paramObjectRefReplacement;
 		public final CtTypeReference<?> paramArrayRefReplacement;
 		public ReplacedTypeInfo(CtTypeReference<?> formalParamRef, Object formalParamValue) {
-			if (!(formalParamValue instanceof Class))
+			if (!(formalParamValue instanceof Class)) {
 				throw new RuntimeException("Expected class value for template parameter " + formalParamRef.getSimpleName()+". Found " + formalParamValue + " instead.");
+			}
 			classReplacement = (Class<?>)formalParamValue;
 			paramRefReplacement = Type().createReference(classReplacement);
 			if (classReplacement.isPrimitive()) {
@@ -166,7 +170,9 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		if (!removeTemplateInterface(ctClass))
 			System.out.println("Could not find template super interface declaration !");
 	
-		Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos = buildReplacementsInfoAndRemoveProvidedFormalTypes(ctClass, instantiationParams);
+		Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos = buildReplacementsInfo(ctClass, instantiationParams);
+		if (replacedTypeInfos == null)
+			return;
 		
 		replaceClassTMethods(ctClass, replacedTypeInfos);
 		replaceParamMethodsAndOperators(ctClass, replacedTypeInfos);
@@ -193,7 +199,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		//removeDeadBlocks(ctClass);
 		
 		decorateInstantiationClassName(ctClass, instantiationParams, replacedTypeInfos);
-		
+
 		result.qualifiedName = ctClass.getQualifiedName();
 		result.sourceCode = ctClass.getPackage() + "\n" + ctClass;
 		
@@ -331,7 +337,8 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 				}
 					
 			} catch (Exception e) {
-				e.printStackTrace();
+				if (!exe.getSimpleName().contains("init>"))
+					e.printStackTrace();
 			}
 		}
 		private Object eval(CtExpression<?> argument) throws Exception {
@@ -359,7 +366,7 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 	}
 	
 	/// Build info on replaced types
-	private Map<CtTypeReference<?>, ReplacedTypeInfo> buildReplacementsInfoAndRemoveProvidedFormalTypes(CtClass<?> ctClass, InstantiationParams instantiationParams) {
+	private Map<CtTypeReference<?>, ReplacedTypeInfo> buildReplacementsInfo(CtClass<?> ctClass, InstantiationParams instantiationParams) {
 		Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos = new HashMap<CtTypeReference<?>, ReplacedTypeInfo>();
 		List<CtTypeReference<?>> formalParamRefs = ctClass.getFormalTypeParameters();
 		for (int i = formalParamRefs.size(); i-- != 0;) {
@@ -373,11 +380,18 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 			if (formalParamValue == null) 
 				continue;
 			
-			formalParamRefs.remove(formalParamRef);
-			
+			//formalParamRefs.remove(formalParamRef);
+			if (!(formalParamValue instanceof Class)) {
+				printError(ctClass, "Expected class value for template parameter " + formalParamRef.getSimpleName()+". Found " + formalParamValue + " instead.");
+				return null;
+			}
 			replacedTypeInfos.put(formalParamRef, new ReplacedTypeInfo(formalParamRef, formalParamValue));
 		}
 		return replacedTypeInfos;
+	}
+
+	private void printError(CtElement element, String string) {
+		getEnvironment().report(this, Severity.ERROR, element, string);
 	}
 
 	/// Replace Class<T> methods
@@ -488,11 +502,14 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 
 	/// Change name of class to decorated instantiation name
 	private void decorateInstantiationClassName(CtClass<?> ctClass, InstantiationParams instantiationParams, Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos) {
+		String decoratedName;
 		if (instantiationParams.overriddenSimpleName == null) {
-			ctClass.setSimpleName(decorateName(ctClass, instantiationParams, replacedTypeInfos));
+			decoratedName = decorateName(ctClass, instantiationParams, replacedTypeInfos);
 		} else {
-			ctClass.setSimpleName(instantiationParams.overriddenSimpleName);
+			decoratedName = instantiationParams.overriddenSimpleName;
 		}
+
+		ctClass.setSimpleName(decoratedName);
 		CtTypeReference<?> decoratedRef = ctClass.getReference();
 		
 		/// Change enclosing class of all template fields access to instantiated type
@@ -511,8 +528,16 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		}
 		
 		ctClass.getModifiers().remove(ModifierKind.ABSTRACT);
-		//removeProvidedFormalParameters(ctClass, instantiationParams.templateParameters);
 		
+		/// Remove replaced formal parameters
+		List<CtTypeReference<?>> formalParamRefs = ctClass.getFormalTypeParameters();
+		for (int i = formalParamRefs.size(); i-- != 0;) {
+			CtTypeReference<?> formalParamRef = formalParamRefs.get(i);
+			if (replacedTypeInfos.get(formalParamRef) != null)
+				formalParamRefs.remove(formalParamRef);
+		}
+		
+		//removeProvidedFormalParameters(ctClass, instantiationParams.templateParameters);
 	}
 
 	/// Replace all typed elements T and Array<T> by actual param type and T[]
@@ -865,15 +890,17 @@ public class TemplateInstantiator extends AbstractSpoonProcessor<CtClass<?>> {
 		CtFieldReference fieldRef = Field().createReference(field);
 		CtFieldAccess fieldAccess = (CtFieldAccess)Code().createVariableAccess(fieldRef, false);
 		
+		/// Add getter
 		if (ctClass.getMethod(getterName) == null) {
 			CtMethod getter = Method().create(ctClass, pub, field.getType(), getterName, noParams, noExceptions);
 			getter.setBody(newBlock(newReturn(fieldAccess)));
 		}
 		
+		/// Add setter
 		if (ctClass.getMethod(setterName, field.getType()) == null) {
 			CtParameter param = newParam(field.getType(), field.getSimpleName());
 			
-			CtMethod setter = Method().create(ctClass, pub, field.getType(), setterName, 
+			CtMethod setter = Method().create(ctClass, pub, null, setterName, 
 					(List)Arrays.asList(param), noExceptions);
 			
 			setter.setBody(newBlock(newFieldAssignment(field, param.getSimpleName())));
