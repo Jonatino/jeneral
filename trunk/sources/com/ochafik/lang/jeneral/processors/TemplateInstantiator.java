@@ -51,7 +51,6 @@ import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
-import com.ochafik.lang.jeneral.processors.InstantiationUtils.InstantiationResult;
 import com.ochafik.lang.jeneral.runtime.Array;
 import com.ochafik.lang.jeneral.runtime.Fields;
 import com.ochafik.lang.jeneral.runtime.Methods;

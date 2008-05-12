@@ -2,12 +2,9 @@ package com.ochafik.lang.jeneral.examples;
 
 import java.io.IOException;
 import java.io.ObjectOutput;
-import java.lang.reflect.InvocationTargetException;
 
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Template;
-import com.ochafik.lang.jeneral.runtime.Fields;
-import com.ochafik.lang.jeneral.runtime.Methods;
 
 @Template
 public abstract class EvalExample<E> implements _EvalExample<E> {
