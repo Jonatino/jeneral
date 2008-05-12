@@ -38,4 +38,5 @@ public @interface Value {
 	float floatValue() default 0;
 	char charValue() default 0;
 	String stringValue() default "";
+	boolean wrapPrimitives() default false;
 }

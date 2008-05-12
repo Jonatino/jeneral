@@ -26,6 +26,8 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
@@ -69,12 +71,28 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 		getLogger().println(o);
 		getLogger().flush();
 	}
+	Map<InstantiationParams, Long> lastInstantiations = new HashMap<InstantiationParams, Long>();
+	public boolean needsInstantiation(InstantiationParams params) {
+		Long last = lastInstantiations.get(params);
+		if (last == null)
+			return true;
+		
+		File f = params.templateFile;
+		if (f != null)
+			return f.lastModified() > last;
+			
+		return true;
+	}
+	
+	public void declareInstantiation(InstantiationParams params) {
+		lastInstantiations.put(params, System.currentTimeMillis());
+	}
 	
 	public AnnotationProcessor getProcessorFor(
 			Set<AnnotationTypeDeclaration> atds,
 			AnnotationProcessorEnvironment env) {
 		
-		return new TemplateProcessor(env);
+		return new TemplateProcessor(env, this);
 	}
 
 	public Collection<String> supportedAnnotationTypes() {

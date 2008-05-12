@@ -12,7 +12,6 @@ public abstract class EvalExample<E> implements _EvalExample<E> {
 	@ParamConstructor(returnNeutralValue = true)
 	abstract E neutral_E();
 
-
 	public static String capitalize(String s) {
 		char[] chars = s.toCharArray();
 		if (chars.length == 0)

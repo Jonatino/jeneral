@@ -4,6 +4,6 @@
  */
 public int testMethod() {
 	// do nothing
-	$blabla
+	// $blabla
 	return -1;
 }

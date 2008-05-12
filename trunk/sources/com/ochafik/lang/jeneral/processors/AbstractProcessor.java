@@ -98,6 +98,7 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 	protected void log(Object o) {
 		getLogger().println(o);
 		getLogger().flush();
+		System.out.println(o);
 	}
 	public AbstractProcessor(AnnotationProcessorEnvironment env){
 		this.environment = env;

@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -73,9 +74,12 @@ import com.ochafik.lang.jeneral.runtime.TemplateInstance;
 import com.ochafik.util.CompoundCollection;
 import com.ochafik.util.listenable.Pair;
 import com.ochafik.util.string.RegexUtils;
+import com.ochafik.util.string.StringUtils;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.declaration.AnnotationMirror;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
+import com.sun.mirror.declaration.AnnotationTypeElementDeclaration;
+import com.sun.mirror.declaration.AnnotationValue;
 import com.sun.mirror.declaration.ClassDeclaration;
 import com.sun.mirror.declaration.ConstructorDeclaration;
 import com.sun.mirror.declaration.Declaration;
@@ -118,9 +122,11 @@ public class TemplateProcessor extends AbstractProcessor {
 		Value.class
 	);
  
-	public TemplateProcessor(AnnotationProcessorEnvironment env){
+	final TemplateProcessorFactory templateProcessorFactory;
+	
+	public TemplateProcessor(AnnotationProcessorEnvironment env, TemplateProcessorFactory templateProcessorFactory){
 		super(env);
-		//log("\n\n\tnew TemplateProcessor\n\n");
+		this.templateProcessorFactory = templateProcessorFactory;
 		initVelocity();
 	}
 	
@@ -951,12 +957,184 @@ public class TemplateProcessor extends AbstractProcessor {
 		return implode(list);
 	}
 
-	private void processInstantiation(Declaration decl) {
-		Instantiate instantiation = decl.getAnnotation(Instantiate.class);
-		Template template = instantiation.template().getAnnotation(Template.class);
-		if (template == null) {
-			printError(decl, "Type " + instantiation.template().getName() + " is not a template. You must annotate it with " + Template.class.getName());
-			return;
+	public <A extends Annotation> AnnotationMirror getAnnotationMirror(Declaration decl, Class<A> aClass) {
+		Collection<AnnotationMirror> annotationMirrors = decl.getAnnotationMirrors();
+		for (AnnotationMirror annotationMirror : annotationMirrors) {
+			if (annotationMirror.getAnnotationType().getClass().equals(aClass)) {
+				return annotationMirror;
+			}
 		}
+		return null;
+	}
+	private void processInstantiation(Declaration decl_) {
+		Set<InstantiationParams> instantiationParamsSet = new HashSet<InstantiationParams>();
+		for (Declaration decl : environment.getDeclarationsAnnotatedWith((AnnotationTypeDeclaration)environment.getTypeDeclaration(Instantiate.class.getName()))) {
+			Instantiate instantiation = decl.getAnnotation(Instantiate.class);
+			Param[] params = instantiation.params();
+		
+			String templateName;
+			try {
+				templateName = instantiation.template().getName();
+			} catch (MirroredTypeException ex) {
+				templateName = ex.getTypeMirror().toString();
+			}
+			
+			Pair<File,List<Pair<String,Class<?>>>> sourceAndParametersSignature = getTemplateFileAndSignature(decl.getPosition(), templateName);
+			if (sourceAndParametersSignature == null)
+				continue;
+			
+			InstantiationParams instantiationParams = new InstantiationParams(templateName);
+			instantiationParams.templateFile = sourceAndParametersSignature.getFirst();
+			
+			
+			List<Pair<String, Class<?>>> parametersSignature = sourceAndParametersSignature.getSecond();
+			if (params.length != parametersSignature.size()) {
+				printError(decl, "Not enough parameters for template instantiation : expected " + StringUtils.implode(parametersSignature) + ", found " + StringUtils.implode(params, ", "));
+				continue;
+			}
+			for (Param param : params) {
+				Value v = param.value();
+				String typeName;
+				try {
+					typeName = v.value().getName();
+				} catch (MirroredTypeException ex) {
+					typeName = ex.getTypeMirror().toString();
+				}
+				
+				try {
+					Class<?> value = Class.forName(typeName);
+					if (!v.wrapPrimitives())
+						value = unwrapPrimitiveClass(value);
+					
+					instantiationParams.templateParameters.add(new Pair<String, Object>(param.name().equals("") ? null : param.name(), value));
+				} catch (ClassNotFoundException e) {
+					logError(decl, e);
+				}
+				
+			}
+			if (templateProcessorFactory.needsInstantiation(instantiationParams)) {
+				instantiationParamsSet.add(instantiationParams);
+			}
+		}
+		try {
+			log("Instantiating : \n\t" + StringUtils.implode(instantiationParamsSet, "\n\t"));
+			
+			Set<InstantiationResult> results = InstantiationUtils.instantiate(instantiationParamsSet);
+			for (InstantiationResult result : results) {
+				try {
+					templateProcessorFactory.declareInstantiation(result.instantiationParams);
+					PrintWriter file = environment.getFiler().createSourceFile(result.qualifiedName);
+					file.print(result.sourceCode);
+					file.close();
+					/*SourcePosition pos = new SourcePosition() {
+
+						public int column() {
+							// TODO Auto-generated method stub
+							return 0;
+						}
+
+						public File file() {
+							// TODO Auto-generated method stub
+							return null;
+						}
+
+						public int line() {
+							// TODO Auto-generated method stub
+							return 0;
+						}
+						
+					};*/
+				} catch (IOException ex) {
+					logError(decl_, ex);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			logError(decl_, e);
+		}
+		/*
+		AnnotationMirror instantiateMirror = getAnnotationMirror(decl, Instantiate.class);
+		if (instantiateMirror == null)
+			log("Failed to find instantiateMirror !");
+		
+		AnnotationValue value = getValue(instantiateMirror, "params");
+		value.getValue();*/
+		
+		//Map<AnnotationTypeElementDeclaration, AnnotationValue> elementValues = instantiateMirror.getElementValues();
+		
+		
+		/*for (int i = 0, len = parametersSignature.size(); i < len; i++) {
+			Pair<String, Object> provided = instantiationParams.templateParameters.get(i);
+			Pair<String, Class<?>> expected = parametersSignature.get(i);
+			
+			String providedName = provided.getFirst(), expectedName = expected.getFirst();
+			if (providedName != null && !providedName.equals(""))
+				if (!providedName.equals(expectedName)) {
+					printError(decl, "Template argument name mismatch : expected " + expectedName + ", found " + providedName);
+					return;
+				}
+			
+			Object val = provided.getValue();
+			Class<?> cl = expected.getValue();
+			if (val == null) {
+				if (cl.isPrimitive()) {
+					
+				}
+			}
+ 		}*/
+		
+		
+	}
+
+	static Map<Class<?>, Class<?>> wrappersToPrimitives = new HashMap<Class<?>, Class<?>>();
+	static {
+		wrappersToPrimitives.put(Integer.class, Integer.TYPE);
+		wrappersToPrimitives.put(Long.class, Long.TYPE);
+		wrappersToPrimitives.put(Short.class, Short.TYPE);
+		wrappersToPrimitives.put(Byte.class, Byte.TYPE);
+		wrappersToPrimitives.put(Double.class, Double.TYPE);
+		wrappersToPrimitives.put(Float.class, Float.TYPE);
+		wrappersToPrimitives.put(Character.class, Character.TYPE);
+	}
+	private Class<?> unwrapPrimitiveClass(Class<?> value) {
+		Class<?> c = wrappersToPrimitives.get(value);
+		return c == null ? value : c;
+	}
+
+	private Pair<File, List<Pair<String, Class<?>>>> getTemplateFileAndSignature(SourcePosition pos, String templateName) {
+		Declaration templateDecl = environment.getTypeDeclaration(templateName);
+		if (templateDecl == null || !(templateDecl instanceof ClassDeclaration)) {
+			printError(pos, "Type " + templateName + " not found or not a class");
+			return null;
+		}
+		Declaration _templateDeclaration = environment.getTypeDeclaration(templateName);
+		if (_templateDeclaration == null || !(_templateDeclaration instanceof ClassDeclaration) || _templateDeclaration.getPosition() == null || _templateDeclaration.getPosition().file() == null) {
+			printError(pos, "Cannot find source code for template " + templateName + ". It must be in the source path in order to be instantiated");
+			return null;
+		}
+		
+		Template template; 
+		try {
+			Class<?> templateClass = Class.forName(templateName);
+			template = templateClass.getAnnotation(Template.class);
+		} catch (ClassNotFoundException e) {
+			template = templateDecl.getAnnotation(Template.class);
+		}
+		if (template == null) {
+			printError(pos, "Type " + templateName + " is not a template. You must annotate it with " + Template.class.getName());
+			return null;
+		}
+		
+		ClassDeclaration templateDeclaration = (ClassDeclaration)_templateDeclaration;
+		
+		Collection<TypeParameterDeclaration> typeParameters = templateDeclaration.getFormalTypeParameters();
+		Param[] additionalParameters = template.additionalParameters();
+		List<Pair<String, Class<?>>> parametersSignature = new ArrayList<Pair<String,Class<?>>>(typeParameters.size() + additionalParameters.length);
+		for (TypeParameterDeclaration d : typeParameters)
+			parametersSignature.add(new Pair<String, Class<?>>(d.getSimpleName(), Class.class));
+		for (Param d : additionalParameters)
+			parametersSignature.add(new Pair<String, Class<?>>(d.name(), d.type()));
+		
+		return new Pair<File, List<Pair<String, Class<?>>>>(templateDeclaration.getPosition().file(), parametersSignature);
 	}
 }

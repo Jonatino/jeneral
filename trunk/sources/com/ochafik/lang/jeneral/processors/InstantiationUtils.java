@@ -4,10 +4,12 @@ import java.io.File;
 import java.util.Set;
 
 import spoon.processing.Builder;
+import spoon.processing.Environment;
 import spoon.reflect.Factory;
 import spoon.support.DefaultCoreFactory;
 import spoon.support.RuntimeProcessingManager;
 import spoon.support.StandardEnvironment;
+import spoon.support.builder.JDTCompiler;
 
 
 public class InstantiationUtils {
@@ -25,8 +27,24 @@ public class InstantiationUtils {
 		System.out.println("[" + name + "] " + (time / 1000000L) + " ms");
 	}
 	
-	public static Set<InstantiationResult> instantiate(Set<InstantiationParams> params, Set<String> qualifiedTemplateClassNames) throws Exception {
-		Factory factory = new Factory(new DefaultCoreFactory(), new StandardEnvironment());
+	public static Set<InstantiationResult> instantiate(Set<InstantiationParams> params) throws Exception {
+		Factory factory = new Factory(new DefaultCoreFactory(), new StandardEnvironment()) {
+			Environment environment;
+			@Override
+			public Environment getEnvironment() {
+				if (environment == null) {
+					environment = new StandardEnvironment() {
+						@Override
+						public String getSourcePath() {
+							return "/Users/ochafik/Prog/Java/sources:/Users/ochafik/Prog/Java/sources/.apt_generated";
+						}
+					};
+					System.out.println(environment.getSourcePath());
+				}
+				return environment;
+			}
+			JDTCompiler c;
+		};
 		Builder builder = factory.getBuilder();
 		for (InstantiationParams param : params)
 			builder.addInputSource(param.templateFile);
