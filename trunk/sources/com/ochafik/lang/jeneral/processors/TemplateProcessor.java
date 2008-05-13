@@ -1004,7 +1004,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				try {
 					Class<?> value = Class.forName(typeName);
 					if (!v.wrapPrimitives())
-						value = unwrapPrimitiveClass(value);
+						value = TypeUtils.unwrapPrimitiveClass(value);
 					
 					instantiationParams.templateParameters.add(new Pair<String, Object>(param.name().equals("") ? null : param.name(), value));
 				} catch (ClassNotFoundException e) {
@@ -1084,21 +1084,6 @@ public class TemplateProcessor extends AbstractProcessor {
  		}*/
 		
 		
-	}
-
-	static Map<Class<?>, Class<?>> wrappersToPrimitives = new HashMap<Class<?>, Class<?>>();
-	static {
-		wrappersToPrimitives.put(Integer.class, Integer.TYPE);
-		wrappersToPrimitives.put(Long.class, Long.TYPE);
-		wrappersToPrimitives.put(Short.class, Short.TYPE);
-		wrappersToPrimitives.put(Byte.class, Byte.TYPE);
-		wrappersToPrimitives.put(Double.class, Double.TYPE);
-		wrappersToPrimitives.put(Float.class, Float.TYPE);
-		wrappersToPrimitives.put(Character.class, Character.TYPE);
-	}
-	private Class<?> unwrapPrimitiveClass(Class<?> value) {
-		Class<?> c = wrappersToPrimitives.get(value);
-		return c == null ? value : c;
 	}
 
 	private Pair<File, List<Pair<String, Class<?>>>> getTemplateFileAndSignature(SourcePosition pos, String templateName) {

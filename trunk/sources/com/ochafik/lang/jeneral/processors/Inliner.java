@@ -12,17 +12,24 @@ import spoon.reflect.eval.SymbolicInstance;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 
-public abstract class Inliner extends AbstractSpoonProcessor<CtInvocation<?>> {
+public abstract class Inliner extends spoon.processing.AbstractProcessor<CtInvocation<?>> {
+	
 	public Inliner() {
 		super();
 	}
 	SymbolicEvaluator evaluator;
 	public SymbolicEvaluator getEvaluator() {
 		if (evaluator == null)
-			evaluator = Eval().createSymbolicEvaluator();
+			evaluator = getFactory().Eval().createSymbolicEvaluator();
 		return evaluator;
 	}
-	
+	SpoonHelper helper;
+	public SpoonHelper getHelper() {
+		if (helper == null) {
+			helper = new SpoonHelper(this);
+		}
+		return helper;
+	}
 	String tag;
 	public void setTag(String tag) {
 		this.tag = tag;

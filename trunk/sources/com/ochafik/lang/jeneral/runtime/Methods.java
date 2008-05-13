@@ -13,6 +13,7 @@ import spoon.reflect.declaration.ModifierKind;
 import com.ochafik.lang.jeneral.annotations.Inlinable;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.processors.Inliner;
+import com.ochafik.lang.jeneral.processors.SpoonHelper;
 import com.ochafik.util.string.StringUtils;
 
 
@@ -139,14 +140,14 @@ public class Methods {
 						if (!(classObj instanceof Class))
 							return;
 						
-						String s = getObjectWrapper((Class)classObj) + "." + methodNameStr + "(" + StringUtils.implode(args.subList(iArgs, args.size())) + ")";
-						invocation.replace(newSnippet(s));
+						String s = SpoonHelper.getObjectWrapper((Class)classObj) + "." + methodNameStr + "(" + StringUtils.implode(args.subList(iArgs, args.size())) + ")";
+						invocation.replace(getHelper().newSnippet(s));
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 					
 				} else {
-					invocation.replace(newSnippet(memberInvocationTarget + "." + methodNameStr + "(" + StringUtils.implode(args.subList(iArgs, args.size())) + ")"));
+					invocation.replace(getHelper().newSnippet(memberInvocationTarget + "." + methodNameStr + "(" + StringUtils.implode(args.subList(iArgs, args.size())) + ")"));
 				}
 			}
 		}

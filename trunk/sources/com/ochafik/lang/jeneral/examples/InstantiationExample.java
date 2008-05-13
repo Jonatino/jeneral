@@ -10,17 +10,16 @@ import com.ochafik.lang.jeneral.annotations.Value;
 	@Param(value = @Value(Integer.class))
 })
 public class InstantiationExample  {
-	void d() {
-		ElementsBuilder__Integer intBuilder = new ElementsBuilder__Integer("test");
+	@Instantiate(template = EvalExample.class, params = { @Param(@Value(Integer.class)) })
+	public static void main(String[] args) {
+		ElementsBuilder__int intBuilder = new ElementsBuilder__int("test");
+		EvalExample__int intEval;
 		try {
 			intBuilder.buildElement(1);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//JDTCompiler c = null;
-		//c.set
-		//c.getUnits(null, null);
 	}
 
 }
