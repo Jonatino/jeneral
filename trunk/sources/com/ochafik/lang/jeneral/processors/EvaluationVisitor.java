@@ -59,8 +59,8 @@ public class EvaluationVisitor extends CtScanner {
 	public <T> void visitCtBinaryOperator(CtBinaryOperator<T> operator) {
 		super.visitCtBinaryOperator(operator);
 		
+		CtExpression<?> left = operator.getLeftHandOperand(), right = operator.getRightHandOperand();
 		if (operator.getKind() == BinaryOperatorKind.PLUS) {
-			CtExpression<?> left = operator.getLeftHandOperand(), right = operator.getRightHandOperand();
 			if ((left instanceof CtLiteral) && (right instanceof CtLiteral)) {
 				Object lv = ((CtLiteral<?>)left).getValue(), rv = ((CtLiteral<?>)right).getValue();
 				if (lv != null && rv != null)
@@ -68,6 +68,8 @@ public class EvaluationVisitor extends CtScanner {
 						operator.replace(helper.Code().createLiteral(String.valueOf(lv) + String.valueOf(rv)));
 					
 			}
+		} else if (operator.getKind() == BinaryOperatorKind.INSTANCEOF) {
+			
 		}
 	}
 	
@@ -157,7 +159,7 @@ public class EvaluationVisitor extends CtScanner {
 	}
 	@Override
 	public void visitCtIf(CtIf ifElement) {
-		//super.visitCtIf(ifElement);
+		super.visitCtIf(ifElement);
 		
 		CtExpression<Boolean> condition = ifElement.getCondition();
 		if (condition instanceof CtLiteral) {
