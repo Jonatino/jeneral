@@ -60,16 +60,26 @@ public class EvaluationVisitor extends CtScanner {
 		super.visitCtBinaryOperator(operator);
 		
 		CtExpression<?> left = operator.getLeftHandOperand(), right = operator.getRightHandOperand();
-		if (operator.getKind() == BinaryOperatorKind.PLUS) {
-			if ((left instanceof CtLiteral) && (right instanceof CtLiteral)) {
+		
+		boolean literals = (left instanceof CtLiteral) && (right instanceof CtLiteral);
+		
+		if (literals) {
+			// Replacements that require both operands to be literals 
+			if (operator.getKind() == BinaryOperatorKind.PLUS) {
 				Object lv = ((CtLiteral<?>)left).getValue(), rv = ((CtLiteral<?>)right).getValue();
-				if (lv != null && rv != null)
+				if (lv != null && rv != null) {
+					/// Concatenate strings
 					if ((lv instanceof String) || (rv instanceof String))
 						operator.replace(helper.Code().createLiteral(String.valueOf(lv) + String.valueOf(rv)));
 					
+					/// Add numbers
+					//if ((lv instanceof Number) && (rv instanceof Number))
+				}
+			} else if (operator.getKind() == BinaryOperatorKind.LT) {
+				
 			}
-		} else if (operator.getKind() == BinaryOperatorKind.INSTANCEOF) {
-			
+		} else 1if (operator.getKind() == BinaryOperatorKind.INSTANCEOF) {
+			// no need for literals here
 		}
 	}
 	
