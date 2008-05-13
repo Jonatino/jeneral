@@ -5,18 +5,23 @@ import java.io.File;
 import com.sun.tools.apt.Main;
 
 public class AptTest {
+	static String source(Class<?> c) {
+		return sourcePath + c.getName().replace('.', '/') + ".java "; 
+	}
+	static String sourcePath = "sources/";
+	
 	public static void main(String[] args) {
 		System.out.println("Running in " + new File(".").getAbsolutePath());
 		String cmd;
-		
-		if (false) {
+		if (true) {
 			cmd = 
 				"-cp classes:libraries/velocity.jar:libraries/spoon.jar " +
 				"-factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory " +
 				"-d classes " +
 				"-s sources/.apt_generated " +
-				//"sources/com/ochafik/lang/jeneral/examples/ElementsBuilder.java " +
-				"sources/com/ochafik/lang/jeneral/examples/InstantiationExample.java"
+				source(ElementsBuilder.class) +
+				source(EvalExample.class) +
+				source(InstantiationExample.class)
 			;
 		} else {
 			cmd = 
@@ -24,8 +29,8 @@ public class AptTest {
 				"-factorypath bin/jeneral.jar " +
 				"-d classes " +
 				"-s sources/.apt_generated " +
-				//"sources/com/ochafik/lang/jeneral/examples/ElementsBuilder.java " +
-				"sources/com/ochafik/lang/jeneral/examples/InstantiationExample.java"
+				source(ElementsBuilder.class) +
+				source(InstantiationExample.class)
 			;
 		}
 		//ElementsBuilder__Integer

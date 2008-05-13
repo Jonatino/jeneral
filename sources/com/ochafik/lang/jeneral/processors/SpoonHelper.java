@@ -1,10 +1,7 @@
 package com.ochafik.lang.jeneral.processors;
-
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import spoon.processing.AbstractProcessor;
+import spoon.processing.FactoryAccessor;
 import spoon.reflect.CoreFactory;
 import spoon.reflect.code.CtArrayAccess;
 import spoon.reflect.code.CtAssignment;
@@ -12,35 +9,40 @@ import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCodeSnippetExpression;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldAccess;
-import spoon.reflect.code.CtIf;
+import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtNewArray;
 import spoon.reflect.code.CtReturn;
 import spoon.reflect.code.CtStatement;
-import spoon.reflect.code.CtVariableAccess;
-import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtParameter;
+import spoon.reflect.declaration.CtTypedElement;
+import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.CodeFactory;
-import spoon.reflect.factory.EnumFactory;
 import spoon.reflect.factory.EvalFactory;
 import spoon.reflect.factory.FieldFactory;
 import spoon.reflect.factory.MethodFactory;
 import spoon.reflect.factory.TypeFactory;
+import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtFieldReference;
 import spoon.reflect.reference.CtLocalVariableReference;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.visitor.Query;
 import spoon.reflect.visitor.filter.TypeFilter;
 
-public abstract class AbstractSpoonProcessor<E extends CtElement> extends AbstractProcessor<E> {
-	CoreFactory Core() { return getFactory().Core(); }
-	CodeFactory Code() { return getFactory().Code(); }
-	FieldFactory Field() { return getFactory().Field(); }
-	EvalFactory Eval() { return getFactory().Eval(); }
-	TypeFactory Type() { return getFactory().Type(); }
-	MethodFactory Method() { return getFactory().Method(); }
+public class SpoonHelper {
+	final FactoryAccessor factoryAccessor;
+	
+	public SpoonHelper(FactoryAccessor factoryAccessor) {
+		this.factoryAccessor = factoryAccessor;
+	}
+
+	CoreFactory Core() { return factoryAccessor.getFactory().Core(); }
+	CodeFactory Code() { return factoryAccessor.getFactory().Code(); }
+	FieldFactory Field() { return factoryAccessor.getFactory().Field(); }
+	EvalFactory Eval() { return factoryAccessor.getFactory().Eval(); }
+	TypeFactory Type() { return factoryAccessor.getFactory().Type(); }
+	MethodFactory Method() { return factoryAccessor.getFactory().Method(); }
 
 	public static <T extends CtElement> TypeFilter<T> typeFilter(Class<T> typeClass) {
 		return new TypeFilter<T>(typeClass);
@@ -76,47 +78,12 @@ public abstract class AbstractSpoonProcessor<E extends CtElement> extends Abstra
 		newArray.setDimensionExpressions(arguments);
 		return newArray;
 	}
-	
-
-	@SuppressWarnings("unchecked")
-	protected <T> Class<T> getPrimitiveWrapper(Class<T> c) {
-		return (Class<T>)primitiveToWrapperClass.get(c);
-	}
-
-	private static Map<Class<?>, Class<?>> primitiveToWrapperClass= new HashMap<Class<?>, Class<?>>();
-	//static Map<String, Class<?>> primitiveToWrapperClass= new HashMap<String, Class<?>>();
-	static Map<String, String> primitiveToClassAccess = new HashMap<String, String>();
-	static {
-		primitiveToClassAccess.put("int", "java.lang.Integer.TYPE");
-		primitiveToClassAccess.put("long", "java.lang.Long.TYPE");
-		primitiveToClassAccess.put("short", "java.lang.Short.TYPE");
-		primitiveToClassAccess.put("byte", "java.lang.Byte.TYPE");
-		primitiveToClassAccess.put("char", "java.lang.Character.TYPE");
-		primitiveToClassAccess.put("float", "java.lang.Float.TYPE");
-		primitiveToClassAccess.put("double", "java.lang.Double.TYPE");
-/*
-		primitiveToWrapperClass.put("int", Integer.class);
-		primitiveToWrapperClass.put("long", Long.class);
-		primitiveToWrapperClass.put("short", Short.class);
-		primitiveToWrapperClass.put("byte", Byte.class);
-		primitiveToWrapperClass.put("char", Character.class);
-		primitiveToWrapperClass.put("float", Float.class);
-		primitiveToWrapperClass.put("double", Double.class);
-		*/
-		primitiveToWrapperClass.put(Integer.TYPE, Integer.class);
-		primitiveToWrapperClass.put(Long.TYPE, Long.class);
-		primitiveToWrapperClass.put(Short.TYPE, Short.class);
-		primitiveToWrapperClass.put(Byte.TYPE, Byte.class);
-		primitiveToWrapperClass.put(Character.TYPE, Character.class);
-		primitiveToWrapperClass.put(Float.TYPE, Float.class);
-		primitiveToWrapperClass.put(Double.TYPE, Double.class);
-	}
 
 	public CtElement classAccess(Class<?> type, CtTypeReference<?> paramRefReplacement) {
 		if (type.isPrimitive()) {
 			//return newSnippet(primitiveToClassAccess.get(type.getName()));
 			try {
-				Class<?> wrapper = getPrimitiveWrapper(type);
+				Class<?> wrapper = TypeUtils.wrapPrimitive(type);
 				CtFieldReference field = Field().createReference(wrapper.getField("TYPE"));
 				CtFieldAccess<Object> fieldAccess = Core().createFieldAccess();
 				//fieldAccess.set.setFinal(true);
@@ -194,29 +161,29 @@ public abstract class AbstractSpoonProcessor<E extends CtElement> extends Abstra
 		return arrayAccess;
 	}
 
-	protected CtCodeSnippetExpression<Object> newSnippet(String string) {
+	public CtCodeSnippetExpression<Object> newSnippet(String string) {
 		CtCodeSnippetExpression<Object> snippet = Core().createCodeSnippetExpression();
 		snippet.setValue(string);
 		return snippet;
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T> Class<T> getObjectWrapper(Class<T> classReplacement) {
+	public static <T> Class<T> getObjectWrapper(Class<T> classReplacement) {
 		if (classReplacement.isPrimitive())
-			return getPrimitiveWrapper(classReplacement);
+			return TypeUtils.wrapPrimitive(classReplacement);
 		return classReplacement;
 	}
 
 	CtTypeReference<?> integerType, intType;
 	public CtTypeReference<?> getIntegerType() {
 		if (integerType == null)
-			integerType = getFactory().Type().createReference(Integer.class);
+			integerType = factoryAccessor.getFactory().Type().createReference(Integer.class);
 
 		return integerType;
 	}
 	public CtTypeReference<?> getIntType() {
 		if (intType == null)
-			intType = getFactory().Type().createReference(Integer.TYPE);
+			intType = factoryAccessor.getFactory().Type().createReference(Integer.TYPE);
 
 		return intType;
 	}
@@ -243,5 +210,36 @@ public abstract class AbstractSpoonProcessor<E extends CtElement> extends Abstra
 		}
 	}*/
 
+	public static boolean acceptableEvalReturnValue(Class<?> expression) {
+		//if (expression instanceof )
+		return expression == Class.class || expression.isPrimitive() || expression == String.class;
+	}
+	public static boolean acceptableEvalReturnValue(CtTypedElement<?> e) {
+		if (e instanceof CtLiteral)
+			return true;
+		return acceptableEvalReturnValue(e.getType());
+	}
+	public static boolean acceptableEvalReturnValue(CtTypeReference<?> c) {
+		if (c == null)
+			return false;
+		
+		String n = c.getQualifiedName();
+		return c.isPrimitive() || 
+			n.equals(Class.class.getName()) || 
+			n.equals(String.class.getName());
+	}
+	
+	public static boolean hasArgumentsWithAcceptableTypesForEval(CtInvocation<?> invocation) {
+		CtExecutableReference<?> exe = invocation.getExecutable();
+		if (!exe.getModifiers().contains(ModifierKind.STATIC) && acceptableEvalReturnValue(exe.getType()))
+			return false;
+		
+		for (CtExpression<?> argument : invocation.getArguments())
+			if (!acceptableEvalReturnValue(argument))
+				return false;
+		
+		return true;
+	}
 	
 }
+

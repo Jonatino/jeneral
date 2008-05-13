@@ -57,21 +57,21 @@ public abstract class ElementsBuilder<T extends Comparable<T>> implements _Eleme
 			return neutral_T();
 		
 		try {
-			T max = (T)T().getField("MAX_VALUE").get(null);
+			T max = T().cast(T().getField("MAX_VALUE").get(null));
 			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		try {
-			T max = (T)Fields.getStatic(T(), "MAX_VALUE");
-			T max2 = (T)Fields.get(max, "MAX_VALUE");
+			T max = T().cast(Fields.getStatic(T(), "MAX_VALUE"));
+			T max2 = T().cast(Fields.get(max, "MAX_VALUE"));
 		} catch (ReflectionException e) {
 			e.printStackTrace();
 		}
       
 		
 		return ret;
-	}
+	} 
 	
 	public void test() {
 		Array<T> array = T(10);
@@ -80,5 +80,11 @@ public abstract class ElementsBuilder<T extends Comparable<T>> implements _Eleme
 		Class<T> tClass = this.T();
 		Class<?> tClass2 = new_T().getClass();
 		array.set(0, new_T());
+		if (T().isPrimitive()) {
+			// T is a primitive
+			T t = T().cast(0);
+		} else {
+			T t = null;
+		}
 	}
 }
