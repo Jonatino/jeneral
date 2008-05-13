@@ -62,13 +62,12 @@ public abstract class ElementsBuilder<T extends Comparable<T>> implements _Eleme
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		try {
+		try { 
 			T max = T().cast(Fields.getStatic(T(), "MAX_VALUE"));
 			T max2 = T().cast(Fields.get(max, "MAX_VALUE"));
 		} catch (ReflectionException e) {
 			e.printStackTrace();
 		}
-      
 		
 		return ret;
 	} 

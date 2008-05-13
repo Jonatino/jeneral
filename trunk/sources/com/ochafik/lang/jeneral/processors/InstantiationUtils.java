@@ -36,7 +36,16 @@ public class InstantiationUtils {
 					environment = new StandardEnvironment() {
 						@Override
 						public String getSourcePath() {
-							return "/Users/ochafik/Prog/Java/sources:/Users/ochafik/Prog/Java/sources/.apt_generated";
+							if (false)
+								return "/Users/ochafik/Prog/Java/sources:/Users/ochafik/Prog/Java/sources/.apt_generated";
+							
+							String workspacePath = System.getProperty("workspace.projectclasspath");
+							if (workspacePath != null)
+								return workspacePath;
+							
+							String classPath = System.getProperty("java.class.path");
+							return classPath == null ? "." : classPath;
+							//return "/Users/ochafik/Prog/Java/sources:/Users/ochafik/Prog/Java/sources/.apt_generated";
 						}
 					};
 					System.out.println(environment.getSourcePath());

@@ -22,6 +22,7 @@ package com.ochafik.lang.jeneral.processors;
 import static com.ochafik.lang.SyntaxUtils.array;
 import static com.ochafik.util.string.StringUtils.implode;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -42,6 +43,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -967,6 +969,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		return null;
 	}
 	private void processInstantiation(Declaration decl_) {
+		/*Properties p = System.getProperties();
+		ByteArrayOutputStream bo = new ByteArrayOutputStream();
+		try {
+			p.store(bo, "");
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		printWarning(decl_.getAnnotationMirrors().iterator().next().getPosition(), new String(bo.toByteArray()));*/
+		
 		Set<InstantiationParams> instantiationParamsSet = new HashSet<InstantiationParams>();
 		for (Declaration decl : environment.getDeclarationsAnnotatedWith((AnnotationTypeDeclaration)environment.getTypeDeclaration(Instantiate.class.getName()))) {
 			Instantiate instantiation = decl.getAnnotation(Instantiate.class);

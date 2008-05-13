@@ -9,7 +9,7 @@ import com.ochafik.lang.jeneral.annotations.Value;
 @Instantiate(template = ElementsBuilder.class, params = {
 	@Param(value = @Value(Integer.class))
 })
-public class InstantiationExample  {
+public class InstantiationExample { 
 	@Instantiate(template = EvalExample.class, params = { @Param(@Value(Integer.class)) })
 	public static void main(String[] args) {
 		ElementsBuilder__int intBuilder = new ElementsBuilder__int("test");
