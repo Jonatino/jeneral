@@ -14,9 +14,10 @@ public class InlinerCache {
 	
 	private final Inliner corruptedInliner = new Inliner() { public void process(CtInvocation<?> element) {} };
 	Map<Method, Inliner> inliners = new HashMap<Method, Inliner>();
-	
-	public InlinerCache(Factory factory) {
+	EvaluationVisitor evaluationVisitor;
+	public InlinerCache(Factory factory, EvaluationVisitor evaluationVisitor) {
 		this.factory = factory;
+		this.evaluationVisitor = evaluationVisitor;
 	}
 	public Inliner getInliner(Method m) {
 		if (m == null)
@@ -31,6 +32,7 @@ public class InlinerCache {
 			try {
 				inliner = inlinable.inliner().newInstance();
 				inliner.setTag(inlinable.tag());
+				inliner.setEvaluationVisitor(evaluationVisitor);
 				inliner.setFactory(factory);
 			} catch (Exception e) {
 				e.printStackTrace();

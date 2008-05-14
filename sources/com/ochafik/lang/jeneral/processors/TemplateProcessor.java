@@ -19,10 +19,13 @@
 */
 package com.ochafik.lang.jeneral.processors;
 
+/*
+include com/ochafik/lang/jeneral/examples/*.java
+*/
+
 import static com.ochafik.lang.SyntaxUtils.array;
 import static com.ochafik.util.string.StringUtils.implode;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -40,10 +43,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -60,10 +61,11 @@ import com.ochafik.admin.velocity.IOTool;
 import com.ochafik.io.ReadText;
 import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
-import com.ochafik.lang.jeneral.annotations.Instantiate;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Property;
+import com.ochafik.lang.jeneral.annotations.SummonTemplate;
+import com.ochafik.lang.jeneral.annotations.SummonTemplates;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.annotations.Value;
@@ -80,14 +82,14 @@ import com.ochafik.util.string.StringUtils;
 import com.sun.mirror.apt.AnnotationProcessorEnvironment;
 import com.sun.mirror.declaration.AnnotationMirror;
 import com.sun.mirror.declaration.AnnotationTypeDeclaration;
-import com.sun.mirror.declaration.AnnotationTypeElementDeclaration;
-import com.sun.mirror.declaration.AnnotationValue;
 import com.sun.mirror.declaration.ClassDeclaration;
 import com.sun.mirror.declaration.ConstructorDeclaration;
 import com.sun.mirror.declaration.Declaration;
 import com.sun.mirror.declaration.FieldDeclaration;
+import com.sun.mirror.declaration.MemberDeclaration;
 import com.sun.mirror.declaration.MethodDeclaration;
 import com.sun.mirror.declaration.Modifier;
+import com.sun.mirror.declaration.PackageDeclaration;
 import com.sun.mirror.declaration.ParameterDeclaration;
 import com.sun.mirror.declaration.TypeDeclaration;
 import com.sun.mirror.declaration.TypeParameterDeclaration;
@@ -115,7 +117,8 @@ public class TemplateProcessor extends AbstractProcessor {
 		TemplatesPrimitives.class,
 		Includes.class,
 		Include.class,
-		Instantiate.class,
+		SummonTemplate.class,
+		SummonTemplates.class,
 		Param.class,
 		ParamConstructor.class,
 		Property.class,
@@ -149,7 +152,7 @@ public class TemplateProcessor extends AbstractProcessor {
 
 	Context context;
 
-	public class GeneratedMethodInfo {
+	public static class GeneratedMethodInfo {
 		String modifiers, returnType, throwsClause, name, argumentsDeclaration;
 		StringWriter body = new StringWriter();
 		PrintWriter pbody = new PrintWriter(body);
@@ -187,7 +190,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			return m;
 		}
 		
-		public TemplateInfo(ClassDeclaration classDeclaration) {
+		public TemplateInfo(ClassDeclaration classDeclaration, AnnotationProcessorEnvironment environment) {
 			this.classDeclaration = classDeclaration;
 			
 			templateInterfaceQualifiedName = RegexUtils.regexReplace(Pattern.compile("^((?:.*\\.)?)?(\\w+)$"), classDeclaration.getQualifiedName(), new MessageFormat("{1}_{2}"));
@@ -234,11 +237,11 @@ public class TemplateProcessor extends AbstractProcessor {
 			constructorInfos = new ArrayList<ConstructorInfo>();
 			for (ConstructorDeclaration originalConstructor : classDeclaration.getConstructors())
 				if (originalConstructor.getModifiers().contains(Modifier.PUBLIC))
-					constructorInfos.add(new ConstructorInfo(this, originalConstructor));
+					constructorInfos.add(new ConstructorInfo(this, originalConstructor, environment));
 		}
 	};
 	
-	public class ConstructorInfo {
+	public static class ConstructorInfo {
 		final ConstructorDeclaration constructorDeclaration;
 		final List<String> originalCtorArgNames;
 		final Set<String> existingArgumentNames;
@@ -249,7 +252,8 @@ public class TemplateProcessor extends AbstractProcessor {
 		final List<String> generatedConstructorArguments;
 		final List<String> generatedFactoryArgumentsDeclarations;
 		final List<String> generatedFactoryArguments;
-		public ConstructorInfo(TemplateInfo templateClassInfo, ConstructorDeclaration constructorDeclaration) {
+		@SuppressWarnings("unchecked")
+		public ConstructorInfo(TemplateInfo templateClassInfo, ConstructorDeclaration constructorDeclaration, AnnotationProcessorEnvironment environment) {
 			this.constructorDeclaration = constructorDeclaration;
 			originalCtorArgNames = getArgumentNames(constructorDeclaration, null);
 			existingArgumentNames = new TreeSet<String>(originalCtorArgNames);
@@ -347,16 +351,40 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 		
-		AnnotationTypeDeclaration instantiationAnno = getAnnotationType(Instantiate.class);
-		for (Declaration dec : environment.getDeclarationsAnnotatedWith(instantiationAnno)) {
-			try {
-				processInstantiation(dec);
-			} catch (Throwable t) {
-				logError(dec, t);
-			}
-		}
+		processInstantiations();
 	}
 	
+	private String getSourcePath(Declaration dec, String defaultValue) {
+		TypeDeclaration typeDec = null;
+		
+		if (dec instanceof TypeDeclaration)
+			typeDec = (TypeDeclaration)dec;
+		else if (dec instanceof MemberDeclaration)
+			typeDec = ((MemberDeclaration)dec).getDeclaringType();
+		else
+			return defaultValue;
+		
+		if (dec.getPosition() == null)
+			return defaultValue;
+		
+		String typeParent;
+		try {
+			typeParent = dec.getPosition().file().getCanonicalFile().getParent();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return defaultValue;
+		}
+		PackageDeclaration pack = typeDec.getPackage();
+		String ppath = pack.getQualifiedName().replace('.', File.separatorChar); 
+		if (typeParent.endsWith(File.separator))
+			ppath += File.separator;
+		
+		if (typeParent.endsWith(ppath)) {
+			return typeParent.substring(0, typeParent.length() - ppath.length());
+		}
+		return defaultValue;
+	}
+
 	private void processIncludes(TemplateInfo templateInfo, SourcePosition includesPosition) {
 		Includes includes = templateInfo.classDeclaration.getAnnotation(Includes.class);
 		if (includes != null) {
@@ -524,7 +552,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			printError(classDeclaration, "Template "+classDeclaration.getQualifiedName()+" must be declared as abstract.");
 		
 		/// Build the template info structure
-		TemplateInfo templateInfo = new TemplateInfo(classDeclaration);
+		TemplateInfo templateInfo = new TemplateInfo(classDeclaration, environment);
 		
 		checkTemplateClassGenericParametersMatchItsInterface(templateInfo);
 		
@@ -534,17 +562,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		/// Now generate the template interface + implementation with factory methods
 		generateTemplateInterfaceAndImplementation(templateInfo);
 		
-		//instantiationTest(templateInfo);
-	}
-
-	private void instantiationTest(TemplateInfo templateInfo) throws IOException {
-		String source = ReadText.readText(templateInfo.classDeclaration.getPosition().file()); 
-		if (source != null) {
-			HackedInstantiator instantiator = new HackedInstantiator(environment, templateInfo);
-			LinkedHashMap<String, Object> values = new LinkedHashMap<String, Object>();
-			values.put("T", Integer.TYPE);
-			instantiator.instantiateTemplate(values);
-		}
 	}
 
 	private void generateTemplateInterfaceAndImplementation(TemplateInfo templateInfo) throws IOException {
@@ -611,54 +628,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		f.close();
 	}
 
-	private String getDocCommentContent(Declaration declaration) {
-		String comment = declaration.getDocComment();
-		if (comment == null || comment.length() == 0) {
-			String source = ReadText.readText(declaration.getPosition().file());
-			if (source == null)
-				return null;
-			
-			int offset = computeOffset(source, declaration.getPosition());
-			if (offset < 0) {
-				printError(declaration, "Failed to parse source comment");
-				return null;
-			}
-			int i = source.lastIndexOf("*/", offset);
-			if (i < 0)
-				return null;
-			
-			int k = source.indexOf(";", i);
-			if (k >= 0 && k < offset)
-				return null;
-			
-			int j = source.lastIndexOf("/**", i);
-			comment = j < 0 ? null : source.substring(j + 3, i - 1);
-		}
-		if (comment == null)
-			return null;
-		
-		comment = comment.trim();
-		if (comment.startsWith("/**"))
-			comment = comment.substring(3);
-		
-		if (comment.endsWith("*/"))
-			comment = comment.substring(0, comment.length() - 2);
-		
-		comment = comment.replaceAll("\n\\s*\\*\\s?+", "\n");
-		return comment;
-	}
-	int computeOffset(String s, SourcePosition pos) {
-		int i = 0, l = 1;
-		while (l < pos.line()) {
-			i = s.indexOf("\n", i);
-			if (i >= 0)
-				l++;
-			else
-				return -1;
-		}
-		return i + pos.column();
-	}
-	
 	private void createImplementationClassCode(LinesFormatter f, TemplateInfo templateInfo) {
 		f.println();
 		f.println("/// Concrete implementation of " + templateInfo.classDeclaration.getSimpleName() + templateInfo.genericParamsUsage);
@@ -968,133 +937,106 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		return null;
 	}
-	private void processInstantiation(Declaration decl_) {
-		/*Properties p = System.getProperties();
-		ByteArrayOutputStream bo = new ByteArrayOutputStream();
-		try {
-			p.store(bo, "");
-		} catch (IOException e1) {
-			e1.printStackTrace();
+	
+	static class InstantiationCtx {
+		public InstantiationParams instantiationParams;
+		public Declaration summoner;
+		public String sourcePath;
+		public InstantiationCtx(InstantiationParams instantiationParams, Declaration summoner, String sourcePath) {
+			this.instantiationParams = instantiationParams;
+			this.summoner = summoner;
+			this.sourcePath = sourcePath;
 		}
-		printWarning(decl_.getAnnotationMirrors().iterator().next().getPosition(), new String(bo.toByteArray()));*/
+	}
+	
+	private void processInstantiations() {
 		
-		Set<InstantiationParams> instantiationParamsSet = new HashSet<InstantiationParams>();
-		for (Declaration decl : environment.getDeclarationsAnnotatedWith((AnnotationTypeDeclaration)environment.getTypeDeclaration(Instantiate.class.getName()))) {
-			Instantiate instantiation = decl.getAnnotation(Instantiate.class);
-			Param[] params = instantiation.params();
+		Map<InstantiationParams, Declaration> instantiationParamsSet = new HashMap<InstantiationParams, Declaration>();
 		
-			String templateName;
-			try {
-				templateName = instantiation.template().getName();
-			} catch (MirroredTypeException ex) {
-				templateName = ex.getTypeMirror().toString();
-			}
+		String sourcePath = null;
+		for (Declaration decl : environment.getDeclarationsAnnotatedWith((AnnotationTypeDeclaration)environment.getTypeDeclaration(SummonTemplates.class.getName()))) {
+			if (sourcePath == null)
+				sourcePath = getSourcePath(decl, ".");
 			
-			Pair<File,List<Pair<String,Class<?>>>> sourceAndParametersSignature = getTemplateFileAndSignature(decl.getPosition(), templateName);
-			if (sourceAndParametersSignature == null)
-				continue;
-			
-			InstantiationParams instantiationParams = new InstantiationParams(templateName);
-			instantiationParams.templateFile = sourceAndParametersSignature.getFirst();
-			
-			
-			List<Pair<String, Class<?>>> parametersSignature = sourceAndParametersSignature.getSecond();
-			if (params.length != parametersSignature.size()) {
-				printError(decl, "Not enough parameters for template instantiation : expected " + StringUtils.implode(parametersSignature) + ", found " + StringUtils.implode(params, ", "));
-				continue;
-			}
-			for (Param param : params) {
-				Value v = param.value();
-				String typeName;
-				try {
-					typeName = v.value().getName();
-				} catch (MirroredTypeException ex) {
-					typeName = ex.getTypeMirror().toString();
-				}
-				
-				try {
-					Class<?> value = Class.forName(typeName);
-					if (!v.wrapPrimitives())
-						value = TypeUtils.unwrapPrimitiveClass(value);
-					
-					instantiationParams.templateParameters.add(new Pair<String, Object>(param.name().equals("") ? null : param.name(), value));
-				} catch (ClassNotFoundException e) {
-					logError(decl, e);
-				}
-				
-			}
-			if (templateProcessorFactory.needsInstantiation(instantiationParams)) {
-				instantiationParamsSet.add(instantiationParams);
-			}
+			for (SummonTemplate instantiation : decl.getAnnotation(SummonTemplates.class).value())
+				processInstantiation(instantiation, sourcePath, decl, instantiationParamsSet);
 		}
-		try {
-			log("Instantiating : \n\t" + StringUtils.implode(instantiationParamsSet, "\n\t"));
+		for (Declaration decl : environment.getDeclarationsAnnotatedWith((AnnotationTypeDeclaration)environment.getTypeDeclaration(SummonTemplate.class.getName()))) {
+			if (sourcePath == null)
+				sourcePath = getSourcePath(decl, ".");
 			
-			Set<InstantiationResult> results = InstantiationUtils.instantiate(instantiationParamsSet);
+			processInstantiation(decl.getAnnotation(SummonTemplate.class), sourcePath, decl, instantiationParamsSet);
+		}
+		
+		try {
+			log("Instantiating : \n\t" + StringUtils.implode(instantiationParamsSet.keySet(), "\n\t"));
+			
+			Set<InstantiationResult> results = InstantiationUtils.instantiate(instantiationParamsSet.keySet(), sourcePath);
 			for (InstantiationResult result : results) {
 				try {
 					templateProcessorFactory.declareInstantiation(result.instantiationParams);
 					PrintWriter file = environment.getFiler().createSourceFile(result.qualifiedName);
 					file.print(result.sourceCode);
 					file.close();
-					/*SourcePosition pos = new SourcePosition() {
-
-						public int column() {
-							// TODO Auto-generated method stub
-							return 0;
-						}
-
-						public File file() {
-							// TODO Auto-generated method stub
-							return null;
-						}
-
-						public int line() {
-							// TODO Auto-generated method stub
-							return 0;
-						}
-						
-					};*/
 				} catch (IOException ex) {
-					logError(decl_, ex);
+					logError(instantiationParamsSet.get(result.instantiationParams), ex);
 				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			logError(decl_, e);
+			for (Declaration d : instantiationParamsSet.values())
+				logError(d, e);
 		}
-		/*
-		AnnotationMirror instantiateMirror = getAnnotationMirror(decl, Instantiate.class);
-		if (instantiateMirror == null)
-			log("Failed to find instantiateMirror !");
+
+	}
+	
+	private void processInstantiation(SummonTemplate instantiation, String sourcePath, Declaration decl, Map<InstantiationParams, Declaration> instantiationParamsSet) {
 		
-		AnnotationValue value = getValue(instantiateMirror, "params");
-		value.getValue();*/
+		Param[] params = instantiation.params();
+	
+		String templateName;
+		try {
+			templateName = instantiation.template().getName();
+		} catch (MirroredTypeException ex) {
+			templateName = ex.getTypeMirror().toString();
+		}
 		
-		//Map<AnnotationTypeElementDeclaration, AnnotationValue> elementValues = instantiateMirror.getElementValues();
+		Pair<File,List<Pair<String,Class<?>>>> sourceAndParametersSignature = getTemplateFileAndSignature(decl.getPosition(), templateName);
+		if (sourceAndParametersSignature == null)
+			return;
+		
+		InstantiationParams instantiationParams = new InstantiationParams(templateName);
+		instantiationParams.templateFile = sourceAndParametersSignature.getFirst();
 		
 		
-		/*for (int i = 0, len = parametersSignature.size(); i < len; i++) {
-			Pair<String, Object> provided = instantiationParams.templateParameters.get(i);
-			Pair<String, Class<?>> expected = parametersSignature.get(i);
-			
-			String providedName = provided.getFirst(), expectedName = expected.getFirst();
-			if (providedName != null && !providedName.equals(""))
-				if (!providedName.equals(expectedName)) {
-					printError(decl, "Template argument name mismatch : expected " + expectedName + ", found " + providedName);
-					return;
-				}
-			
-			Object val = provided.getValue();
-			Class<?> cl = expected.getValue();
-			if (val == null) {
-				if (cl.isPrimitive()) {
-					
-				}
+		List<Pair<String, Class<?>>> parametersSignature = sourceAndParametersSignature.getSecond();
+		if (params.length != parametersSignature.size()) {
+			printError(decl, "Not enough parameters for template instantiation : expected " + StringUtils.implode(parametersSignature) + ", found " + StringUtils.implode(params, ", "));
+			return;
+		}
+		for (Param param : params) {
+			Value v = param.value();
+			String typeName;
+			try {
+				typeName = v.value().getName();
+			} catch (MirroredTypeException ex) {
+				typeName = ex.getTypeMirror().toString();
 			}
- 		}*/
-		
-		
+			
+			try {
+				Class<?> value = Class.forName(typeName);
+				if (!v.wrapPrimitives())
+					value = TypeUtils.unwrapPrimitiveClass(value);
+				
+				instantiationParams.templateParameters.add(new Pair<String, Object>(param.name().equals("") ? null : param.name(), value));
+			} catch (ClassNotFoundException e) {
+				logError(decl, e);
+			}
+			
+		}
+		if (templateProcessorFactory.needsInstantiation(instantiationParams)) {
+			instantiationParamsSet.put(instantiationParams, decl);
+		}
 	}
 
 	private Pair<File, List<Pair<String, Class<?>>>> getTemplateFileAndSignature(SourcePosition pos, String templateName) {

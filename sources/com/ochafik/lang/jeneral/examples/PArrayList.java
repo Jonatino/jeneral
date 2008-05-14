@@ -46,7 +46,7 @@ import com.ochafik.lang.jeneral.runtime.ReflectionException;
  * @author Eric D. Friedman
  * @author Rob Eden
  */
-@Template
+@Template 
 public abstract class PArrayList<E extends Comparable<E>> implements Externalizable, Cloneable, _PArrayList<E> {
 	static final long serialVersionUID = 1L;
 	

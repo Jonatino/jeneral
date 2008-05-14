@@ -1,6 +1,7 @@
 package com.ochafik.lang.jeneral.runtime;
 
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
+import com.ochafik.lang.jeneral.processors.TypeUtils;
 
 public class Fields {
 
@@ -8,7 +9,7 @@ public class Fields {
 	@TemplatesPrimitives
 	public static Object getStatic(Class<?> c, String name) throws ReflectionException {
 		try {
-			return c.getField(name).get(null);
+			return TypeUtils.wrapPrimitiveClass(c).getField(name).get(null);
 		} catch (Exception e) {
 			throw new ReflectionException(e);
 		}

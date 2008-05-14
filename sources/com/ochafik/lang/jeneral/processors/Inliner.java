@@ -17,12 +17,15 @@ public abstract class Inliner extends spoon.processing.AbstractProcessor<CtInvoc
 	public Inliner() {
 		super();
 	}
-	SymbolicEvaluator evaluator;
-	public SymbolicEvaluator getEvaluator() {
-		if (evaluator == null)
-			evaluator = getFactory().Eval().createSymbolicEvaluator();
-		return evaluator;
+	
+	EvaluationVisitor evaluationVisitor;
+	public void setEvaluationVisitor(EvaluationVisitor evaluationVisitor) {
+		this.evaluationVisitor = evaluationVisitor;
 	}
+	public EvaluationVisitor getEvaluationVisitor() {
+		return evaluationVisitor;
+	}
+	
 	SpoonHelper helper;
 	public SpoonHelper getHelper() {
 		if (helper == null) {
@@ -37,7 +40,13 @@ public abstract class Inliner extends spoon.processing.AbstractProcessor<CtInvoc
 	public String getTag() {
 		return tag;
 	}
-	
+	/*
+	SymbolicEvaluator evaluator;
+	public SymbolicEvaluator getEvaluator() {
+		if (evaluator == null)
+			evaluator = getFactory().Eval().createSymbolicEvaluator();
+		return evaluator;
+	}
 	protected boolean mayEval(CtTypedElement<?> e) {
 		if (e instanceof CtLiteral)
 			return true;
@@ -92,5 +101,5 @@ public abstract class Inliner extends spoon.processing.AbstractProcessor<CtInvoc
 		}
 		return evaluatedArguments;
 	}
-	
+	*/
 }

@@ -1,6 +1,7 @@
 package com.ochafik.lang.jeneral.processors;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 import spoon.processing.Builder;
@@ -27,32 +28,18 @@ public class InstantiationUtils {
 		System.out.println("[" + name + "] " + (time / 1000000L) + " ms");
 	}
 	
-	public static Set<InstantiationResult> instantiate(Set<InstantiationParams> params) throws Exception {
+	@SuppressWarnings("serial")
+	public static Set<InstantiationResult> instantiate(Set<InstantiationParams> params, final String sourcePath) throws Exception {
 		Factory factory = new Factory(new DefaultCoreFactory(), new StandardEnvironment()) {
 			Environment environment;
-			@Override
-			public Environment getEnvironment() {
-				if (environment == null) {
-					environment = new StandardEnvironment() {
-						@Override
-						public String getSourcePath() {
-							if (false)
-								return "/Users/ochafik/Prog/Java/sources:/Users/ochafik/Prog/Java/sources/.apt_generated";
-							
-							String workspacePath = System.getProperty("workspace.projectclasspath");
-							if (workspacePath != null)
-								return workspacePath;
-							
-							String classPath = System.getProperty("java.class.path");
-							return classPath == null ? "." : classPath;
-							//return "/Users/ochafik/Prog/Java/sources:/Users/ochafik/Prog/Java/sources/.apt_generated";
-						}
-					};
-					System.out.println(environment.getSourcePath());
-				}
+			@Override public Environment getEnvironment() {
+				if (environment == null)
+					environment = new StandardEnvironment() { @Override public String getSourcePath() { 
+						return sourcePath; 
+					}};
+				
 				return environment;
 			}
-			JDTCompiler c;
 		};
 		Builder builder = factory.getBuilder();
 		for (InstantiationParams param : params)
@@ -62,10 +49,14 @@ public class InstantiationUtils {
 		
 		TemplateInstantiator templateProcessor = new TemplateInstantiator(params);
 
-		RuntimeProcessingManager manager = new RuntimeProcessingManager(factory);
-		manager.addProcessor(templateProcessor);
-		manager.process();
-		
+		try {
+			RuntimeProcessingManager manager = new RuntimeProcessingManager(factory);
+			manager.addProcessor(templateProcessor);
+			manager.process();
+		} catch (Throwable th) {
+			System.err.println("Caught error while instantiating " + params);
+			th.printStackTrace();
+		}
 		return templateProcessor.getResults();
 	}
 	

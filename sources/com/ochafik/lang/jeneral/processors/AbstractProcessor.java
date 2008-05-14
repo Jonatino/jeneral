@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ochafik.io.ReadText;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.util.listenable.AdaptedCollection;
 import com.ochafik.util.listenable.Adapter;
@@ -149,6 +150,17 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		return null;
 	}
 	
+	public static int computeOffset(String s, SourcePosition pos) {
+		int i = 0, l = 1;
+		while (l < pos.line()) {
+			i = s.indexOf("\n", i);
+			if (i >= 0)
+				l++;
+			else
+				return -1;
+		}
+		return i + pos.column();
+	}
 	public static List<String> getArgumentNames(ExecutableDeclaration constructor, List<String> existingNames) {
 		if (existingNames == null)
 			existingNames = new ArrayList<String>();
@@ -241,4 +253,42 @@ public abstract class AbstractProcessor implements AnnotationProcessor {
 		}
 		return typeAndArgNameOut;
 	}
+	
+	public String getDocCommentContent(Declaration declaration) {
+		String comment = declaration.getDocComment();
+		if (comment == null || comment.length() == 0) {
+			String source = ReadText.readText(declaration.getPosition().file());
+			if (source == null)
+				return null;
+			
+			int offset = AbstractProcessor.computeOffset(source, declaration.getPosition());
+			if (offset < 0) {
+				printError(declaration, "Failed to parse source comment");
+				return null;
+			}
+			int i = source.lastIndexOf("*/", offset);
+			if (i < 0)
+				return null;
+			
+			int k = source.indexOf(";", i);
+			if (k >= 0 && k < offset)
+				return null;
+			
+			int j = source.lastIndexOf("/**", i);
+			comment = j < 0 ? null : source.substring(j + 3, i - 1);
+		}
+		if (comment == null)
+			return null;
+		
+		comment = comment.trim();
+		if (comment.startsWith("/**"))
+			comment = comment.substring(3);
+		
+		if (comment.endsWith("*/"))
+			comment = comment.substring(0, comment.length() - 2);
+		
+		comment = comment.replaceAll("\n\\s*\\*\\s?+", "\n");
+		return comment;
+	}
+	
 }
