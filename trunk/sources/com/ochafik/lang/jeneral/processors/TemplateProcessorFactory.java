@@ -55,7 +55,7 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 	protected PrintWriter getLogger() {
 		if (pout == null) {
 			try {
-				pout = new PrintWriter(new FileWriter(new File("/Users/ochafik/Prog/Java/templates_factory_logs.txt"), true));
+				pout = new PrintWriter(new FileWriter(new File(new File(System.getProperty("user.home")), "templates_factory_logs.txt"), true));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
