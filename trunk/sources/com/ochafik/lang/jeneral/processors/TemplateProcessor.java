@@ -1011,7 +1011,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		List<Pair<String, Class<?>>> parametersSignature = sourceAndParametersSignature.getSecond();
 		if (params.length != parametersSignature.size()) {
-			printError(decl, "Not enough parameters for template instantiation : expected " + StringUtils.implode(parametersSignature) + ", found " + StringUtils.implode(params, ", "));
+			printError(decl, "Not enough parameters for template instantiation : expected " + StringUtils.implode(parametersSignature) + ", found " + StringUtils.implode(Arrays.asList(params), ", "));
 			return;
 		}
 		for (Param param : params) {
