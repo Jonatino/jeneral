@@ -24,6 +24,7 @@ import spoon.reflect.eval.SymbolicInstance;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtScanner;
+import spoon.reflect.visitor.Query;
 
 import com.ochafik.lang.jeneral.runtime.Methods;
 
@@ -78,7 +79,7 @@ public class EvaluationVisitor extends CtScanner {
 			} else if (operator.getKind() == BinaryOperatorKind.LT) {
 				
 			}
-		} else 1if (operator.getKind() == BinaryOperatorKind.INSTANCEOF) {
+		} else if (operator.getKind() == BinaryOperatorKind.INSTANCEOF) {
 			// no need for literals here
 		}
 	}
@@ -91,16 +92,37 @@ public class EvaluationVisitor extends CtScanner {
 				scan(e);
 	}
 
+	InlinerCache inlinerCache;
+	InlinerCache getInlinerCache() {
+		if (inlinerCache == null)
+			inlinerCache = new InlinerCache(helper.getFactory(), this);
+		return inlinerCache;
+	}
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> void visitCtInvocation(CtInvocation<T> invocation) {
 		super.visitCtInvocation(invocation);
 		
-		if (!SpoonHelper.hasArgumentsWithAcceptableTypesForEval(invocation))
+		try {
+			Inliner inliner = getInlinerCache().getInliner(invocation.getExecutable().getActualMethod());
+			if (inliner != null) {
+				inliner.process(invocation);
+				return;
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		
+		try {
+			if (!SpoonHelper.hasArgumentsWithAcceptableTypesForEval(invocation))
+				return;
+		} catch (Exception ex) {
+			ex.printStackTrace();
 			return;
+		}
 		
 		CtExecutableReference<T> exe = invocation.getExecutable();
-		System.out.println("Invocation = " + invocation);
+		//System.out.println("Invocation = " + invocation);
 		
 		List<CtExpression<?>> arguments = invocation.getArguments();
 		Class[] argsTypes = new Class[arguments.size()];
@@ -131,23 +153,22 @@ public class EvaluationVisitor extends CtScanner {
 			Class<?> classLiteral = TypeUtils.parseClassLiteral(targetStr);
 			if (classLiteral != null) {
 				class1 = Class.class; 
-				instance = TypeUtils.wrapPrimitive(classLiteral);
+				instance = TypeUtils.wrapPrimitiveClass(classLiteral);
 			} else {
 				class1 = Class.forName(exe.getDeclaringType().getQualifiedName());
 			}
 			
 			if (class1 != null) {
-				class1 = TypeUtils.wrapPrimitive(class1);
+				class1 = TypeUtils.wrapPrimitiveClass(class1);
 				//Method m = class1.getMethod(exe.getSimpleName(), argsTypes);
 				//invocation.replace(Code().createLiteral(m.invoke(null, evaluatedArguments)));
 				//invocation.replace(Code().createLiteral(Methods.invokeStatic(class1, exe.getSimpleName(), argsTypes, evaluatedArguments)));
 				Method m = Methods.getMethodForArgs(class1, exe.getSimpleName(), evaluatedArguments);
 				if ((m.getModifiers() & Modifier.STATIC) != 0) {
 					invocation.replace(helper.Code().createLiteral(Methods.invokeStatic(class1, exe.getSimpleName(), evaluatedArguments)));
-				} else {
+				} else if (instance != null)
 					invocation.replace(helper.Code().createLiteral(Methods.invoke(instance, exe.getSimpleName(), evaluatedArguments)));
-				}
-				
+					
 			}
 				
 		} catch (Exception e) {
@@ -155,7 +176,7 @@ public class EvaluationVisitor extends CtScanner {
 				e.printStackTrace();
 		}
 	}
-	private Object eval(CtExpression<?> argument) throws Exception {
+	public Object eval(CtExpression<?> argument) throws Exception {
 		if (argument instanceof CtLiteral) {
 			return ((CtLiteral<?>)argument).getValue();
 		} else {

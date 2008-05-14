@@ -34,7 +34,7 @@ public class InstantiationTest {
 			//params.templateParameters.put("T", JLabel.class);
 			
 			
-			Set<InstantiationResult> results = InstantiationUtils.instantiate(Collections.singleton(params));
+			Set<InstantiationResult> results = InstantiationUtils.instantiate(Collections.singleton(params), sourcePath.toString());
 			for (InstantiationResult result : results) {
 				System.out.println("RESULT for " + result.qualifiedName);
 				System.out.println(result.sourceCode);

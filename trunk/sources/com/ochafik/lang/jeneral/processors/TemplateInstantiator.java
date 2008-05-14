@@ -103,11 +103,6 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 			b.append("__");
 			ReplacedTypeInfo replacedTypeInfo = replacedTypeInfos.get(ref);
 			if (replacedTypeInfo != null) {
-				//if (value instanceof Class) {
-//					b.append(((Class<?>)value).getSimpleName());
-//				} else {
-//					b.append(value);
-//				}
 				b.append(replacedTypeInfo.classReplacement.getSimpleName());
 			}	
 		}
@@ -126,7 +121,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 			classReplacement = (Class<?>)formalParamValue;
 			paramRefReplacement = helper.Type().createReference(classReplacement);
 			if (classReplacement.isPrimitive()) {
-				paramObjectRefReplacement = helper.Type().createReference(TypeUtils.wrapPrimitive(classReplacement));
+				paramObjectRefReplacement = helper.Type().createReference(TypeUtils.wrapPrimitiveClass(classReplacement));
 			} else {
 				paramObjectRefReplacement = paramRefReplacement;
 			}
@@ -165,10 +160,8 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 		replaceTClassGetterAndArrayCreator(ctClass, replacedTypeInfos);
 		replaceParamConstructors(ctClass, replacedTypeInfos, constructorContracts);
 		
-		new EvaluationVisitor(this).scan(ctClass);
-		
 		Map<CtTypeReference<?>, CtTypeReference<?>> typeReplacements = new HashMap<CtTypeReference<?>, CtTypeReference<?>>();
-		typeReplacements.put(originalTemplateTypeRef, decoratedTemplateTypeRef);
+		//typeReplacements.put(originalTemplateTypeRef, decoratedTemplateTypeRef);
 		for (Map.Entry<CtTypeReference<?>, ReplacedTypeInfo> e : replacedTypeInfos.entrySet()) {
 			ReplacedTypeInfo replacedTypeInfo = e.getValue(); 
 			typeReplacements.put(e.getKey(), replacedTypeInfo.paramRefReplacement);
@@ -176,6 +169,12 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 			arrayRef.getActualTypeArguments().add(e.getKey());
 			typeReplacements.put(arrayRef, replacedTypeInfo.paramArrayRefReplacement);
 		}
+		replaceTypes(ctClass, typeReplacements);
+		
+		new EvaluationVisitor(this).scan(ctClass);
+		
+		typeReplacements.clear();
+		typeReplacements.put(originalTemplateTypeRef, decoratedTemplateTypeRef);
 		replaceTypes(ctClass, typeReplacements);
 		
 		//replaceTAndTArrayTypes(ctClass, replacedTypeInfos, result);
@@ -263,9 +262,9 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 									if (fieldName instanceof CtLiteral) {
 										String fieldNameStr = ((CtLiteral)fieldName).getValue().toString();
 										if ((memberInvocationTarget instanceof CtLiteral) && ((CtLiteral)memberInvocationTarget).getValue() == null)
-											parentInvocation.replace(helper.newSnippet(helper.getObjectWrapper(replacedTypeInfo.classReplacement).getName() + "." + fieldNameStr));
+											parentInvocation.replace(getFactory().Code().createCodeSnippetExpression(SpoonHelper.getObjectWrapper(replacedTypeInfo.classReplacement).getName() + "." + fieldNameStr));
 										else
-											parentInvocation.replace(helper.newSnippet(memberInvocationTarget + "." + fieldNameStr));
+											parentInvocation.replace(getFactory().Code().createCodeSnippetExpression(memberInvocationTarget + "." + fieldNameStr));
 										continue;
 									}
 								} else if (parentExeSimpleName.equals("invoke") && exeSimpleName.equals("getMethod") && nArgs == 1) {
@@ -273,9 +272,9 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 									if (methodName instanceof CtLiteral) {
 										String methodNameStr = ((CtLiteral)methodName).getValue().toString();
 										if ((memberInvocationTarget instanceof CtLiteral) && ((CtLiteral)memberInvocationTarget).getValue() == null)
-											parentInvocation.replace(helper.newSnippet(helper.getObjectWrapper(replacedTypeInfo.classReplacement).getName() + "." + methodNameStr + "(" + StringUtils.implode(args.subList(1, args.size())) + ")"));
+											parentInvocation.replace(getFactory().Code().createCodeSnippetExpression(SpoonHelper.getObjectWrapper(replacedTypeInfo.classReplacement).getName() + "." + methodNameStr + "(" + StringUtils.implode(args.subList(1, args.size())) + ")"));
 										else
-											parentInvocation.replace(helper.newSnippet(memberInvocationTarget + "." + methodNameStr + "(" + StringUtils.implode(args.subList(1, args.size())) + ")"));
+											parentInvocation.replace(getFactory().Code().createCodeSnippetExpression(memberInvocationTarget + "." + methodNameStr + "(" + StringUtils.implode(args.subList(1, args.size())) + ")"));
 										continue;
 									}
 									continue;
@@ -293,12 +292,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 							} catch (Exception e) {
 								throw new RuntimeException("Exception during eval of " +replacedTypeInfo+".class." + exeSimpleName + "()", e);
 							}
-						} /*else if (exeSimpleName.equals("cast") && nArgs == 1) {
-							CtExpression casted = args.get(0);
-							casted.setType(replacedTypeInfo.paramRefReplacement);
-							invocation.replace(casted);
-							//invocation.replace(newSnippet("(" + replacedTypeInfo.classReplacement.getName()+")" + args.get(0)));
-						}*/
+						}
 					}
 				}
 			}
@@ -331,17 +325,6 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 			}
 		}
 		
-	}
-
-	/// Replace Methods methods
-	@SuppressWarnings("unchecked")
-	private void replaceMethodsInvokingMethods(CtClass<?> ctClass) {
-		InlinerCache inlinerCache = new InlinerCache(getFactory());
-		for (CtInvocation<?> invocation : Query.getElements(ctClass, SpoonHelper.typeFilter(CtInvocation.class))) {
-			Inliner inliner = inlinerCache.getInliner(invocation.getExecutable().getActualMethod());
-			if (inliner != null)
-				inliner.process(invocation);
-		}
 	}
 
 	/// Change name of class to decorated instantiation name
@@ -385,7 +368,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 	}
 
 	/// Replace all typed elements T and Array<T> by actual param type and T[]
-	@SuppressWarnings("unchecked")
+	/*@SuppressWarnings("unchecked")
 	private void replaceTAndTArrayTypes(CtClass<?> ctClass, Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos, InstantiationResult instantiationResult) {
 		for (CtTypedElement<?> typedElement : Query.getElements(ctClass, SpoonHelper.typeFilter(CtTypedElement.class))) {
 			CtTypeReference<?> typedElementType = typedElement.getType();
@@ -415,7 +398,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 				instantiationResult.cascadedInstantiations.add(cascadedInstantiation);
 			}
 		}
-	}
+	}*/
 	
 	@SuppressWarnings("unchecked")
 	CtTypeReference performReplacements(CtTypeReference<?> ref, Map<CtTypeReference<?>, CtTypeReference<?>> typeReplacements) {
@@ -437,7 +420,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 	@SuppressWarnings("unchecked")
 	private CtTypeReference<?> wrapPrimitive(CtTypeReference ref) {
 		if (ref.isPrimitive())
-			return helper.Type().createReference(TypeUtils.wrapPrimitive(ref.getActualClass()));
+			return helper.Type().createReference(TypeUtils.wrapPrimitiveClass(ref.getActualClass()));
 		return ref;
 	}
 
@@ -471,7 +454,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 				
 				if (replacedTypeInfo.classReplacement.isPrimitive()) {
 					if (args.size() == 0) {
-						invocation.replace(helper.newSnippet(
+						invocation.replace(getFactory().Code().createCodeSnippetExpression(
 								replacedTypeInfo.classReplacement.isAssignableFrom(Integer.TYPE) ? 
 								"0" : 
 								"(" + replacedTypeInfo.classReplacement.getSimpleName() + ")0")); 
@@ -480,16 +463,16 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 						if (replacedTypeInfo.paramRefReplacement.isAssignableFrom(singleArg.getType()))
 							invocation.replace(singleArg);
 						else
-							invocation.replace(helper.newSnippet("(" + replacedTypeInfo.classReplacement.getSimpleName() + ")" + args.get(0)));
+							invocation.replace(getFactory().Code().createCodeSnippetExpression("(" + replacedTypeInfo.classReplacement.getSimpleName() + ")" + args.get(0)));
 					} else {
 						throw new TemplateContractViolationException("Primitive types have only two constructors : a default (zero-valued) one, and one with a single argument that has to be castable to the primitive type.");
 					}
 				} else {
 					ParamConstructor paramConstructorAnnotation = constructorContract.getAnnotation(ParamConstructor.class);
 					if (paramConstructorAnnotation.returnNeutralValue())
-						invocation.replace(helper.newSnippet("(" + replacedTypeInfo.classReplacement.getName() + ")null"));
+						invocation.replace(getFactory().Code().createCodeSnippetExpression("(" + replacedTypeInfo.classReplacement.getName() + ")null"));
 					else 
-						invocation.replace(helper.newSnippet("new " + replacedTypeInfo.classReplacement.getName() + "(" + StringUtils.implode(invocation.getArguments(), ", ") + ")"));
+						invocation.replace(getFactory().Code().createCodeSnippetExpression("new " + replacedTypeInfo.classReplacement.getName() + "(" + StringUtils.implode(invocation.getArguments(), ", ") + ")"));
 				}
 				break;
 			}
@@ -542,11 +525,11 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 						invocation.replace(helper.newArrayAccess(target, (CtExpression<Integer>)args.get(0)));
 						continue;
 					} else if (exeSimpleName.equals("length") && nArgs == 0) {
-						invocation.replace(helper.newSnippet("(" + target + ").length"));
+						invocation.replace(getFactory().Code().createCodeSnippetExpression("(" + target + ").length"));
 						continue;
 					} else if (exeSimpleName.equals("getClass") && nArgs == 0) {
 						ReplacedTypeInfo replacedTypeInfo = replacedTypeInfos.get(targetFormalParamType);
-						invocation.replace(helper.newSnippet(replacedTypeInfo.classReplacement.getName() + "[].class"));
+						invocation.replace(getFactory().Code().createCodeSnippetExpression(replacedTypeInfo.classReplacement.getName() + "[].class"));
 						continue;
 					} else {
 						throw new RuntimeException("Unhandled method in " + Array.class.getName() + ": " + exeSimpleName);
@@ -557,7 +540,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 		
 	}
 
-	/// Replace T.equals(T) by T == T (if T.isPrimitive()), and T.compareTo(T) by T < T, T >= T.... (where applicable)
+	/// Replace T.equals(T) by T == T (if T().isPrimitive()), and T.compareTo(T) by T < T, T >= T.... (where applicable)
 	private void replaceParamMethodsAndOperators(CtClass<?> ctClass, Map<CtTypeReference<?>, ReplacedTypeInfo> replacedTypeInfos) {
 		for (CtInvocation<?> invocation : Query.getElements(ctClass, SpoonHelper.typeFilter(CtInvocation.class))) {
 			String exeSimpleName = invocation.getExecutable().getSimpleName();
@@ -591,7 +574,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 					if (helper.isInteger(target))
 						invocation.replace(target);
 					else
-						invocation.replace(helper.newSnippet("(int)" + target));
+						invocation.replace(getFactory().Code().createCodeSnippetExpression("(int)" + target));
 					continue;
 				} else {
 					throw new RuntimeException("Unhandled method in " + Array.class.getName() + ": " + exeSimpleName);

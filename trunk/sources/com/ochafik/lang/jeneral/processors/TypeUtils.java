@@ -20,7 +20,7 @@ public class TypeUtils {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> Class<T> wrapPrimitive(Class<T> c) {
+	public static <T> Class<T> wrapPrimitiveClass(Class<T> c) {
 		if (!c.isPrimitive())
 			return c;
 		return (Class<T>)primitiveToWrapperClass.get(c);

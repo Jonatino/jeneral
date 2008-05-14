@@ -14,6 +14,7 @@ import com.ochafik.lang.jeneral.annotations.Inlinable;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.processors.Inliner;
 import com.ochafik.lang.jeneral.processors.SpoonHelper;
+import com.ochafik.lang.jeneral.processors.TypeUtils;
 import com.ochafik.util.string.StringUtils;
 
 
@@ -127,37 +128,31 @@ public class Methods {
 	public static class StaticInvokeInliner extends Inliner {
 		public void process(CtInvocation<?> invocation) {
 			List<CtExpression<?>> args = invocation.getArguments();
-			CtExpression memberInvocationTarget = args.get(0);
-			CtExpression methodName = args.get(1);
+			String[] tags = getTag().split(",");
+			CtExpression<?> targetExp = args.get(Integer.parseInt(tags[0]));
+			CtExpression<?> methodName = args.get(Integer.parseInt(tags[1]));
+			List<CtExpression<?>> argsCall = args.subList(Integer.parseInt(tags[2]), args.size());
 			
-			int iArgs = Integer.parseInt(getTag());
 			if (methodName instanceof CtLiteral) {
-				String methodNameStr = ((CtLiteral)methodName).getValue().toString();
-				if (invocation.getExecutable().getModifiers().contains(ModifierKind.STATIC)) {
-				//if ((memberInvocationTarget instanceof CtLiteral) && ((CtLiteral)memberInvocationTarget).getValue() == null)
-					try {
-						Object classObj = eval(memberInvocationTarget);
-						if (!(classObj instanceof Class))
-							return;
-						
-						String s = SpoonHelper.getObjectWrapper((Class)classObj) + "." + methodNameStr + "(" + StringUtils.implode(args.subList(iArgs, args.size())) + ")";
-						invocation.replace(getHelper().newSnippet(s));
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					
-				} else {
-					invocation.replace(getHelper().newSnippet(memberInvocationTarget + "." + methodNameStr + "(" + StringUtils.implode(args.subList(iArgs, args.size())) + ")"));
-				}
+				String methodNameStr = ((CtLiteral<?>)methodName).getValue().toString();
+				String target;
+				if ("this".equals(targetExp.toString().trim()) || "getClass()".equals(targetExp.toString().trim()))
+					target = "";
+				else
+					target = targetExp.toString() + ".";
+				
+				String s = target + methodNameStr + "(" + StringUtils.implode(argsCall) + ")";
+				boolean isExpr = invocation.getParent() instanceof CtExpression;
+				invocation.replace(isExpr ? getFactory().Code().createCodeSnippetExpression(s).compile() : getFactory().Code().createCodeSnippetStatement(s));
 			}
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	@Inlinable(inliner = StaticInvokeInliner.class, tag = "1")
+	@Inlinable(inliner = StaticInvokeInliner.class, tag = "0,1,3")
 	public static Object invokeStatic(Class<?> c, String name, Class[] argTypes, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
-			Method m = getMethodForArgTypes(c, name, argTypes);
+			Method m = getMethodForArgTypes(TypeUtils.wrapPrimitiveClass(c), name, argTypes);
 			return m.invoke(null, getArgsWithVarArgs(m, params));
 			//return c.getMethod(name, argTypes).invoke(null, params);
 		} catch (InvocationTargetException ex) {
@@ -168,10 +163,10 @@ public class Methods {
 	}
 
 	@TemplatesPrimitives
-	@Inlinable(inliner = StaticInvokeInliner.class, tag = "2")
+	@Inlinable(inliner = StaticInvokeInliner.class, tag = "0,1,2")
 	public static Object invokeStatic(Class<?> c, String name, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
-			Method m = getMethodForArgs(c, name, params);
+			Method m = getMethodForArgs(TypeUtils.wrapPrimitiveClass(c), name, params);
 			return m.invoke(null, getArgsWithVarArgs(m, params));
 		} catch (InvocationTargetException ex) {
 			throw ex;
@@ -185,6 +180,7 @@ public class Methods {
 
 	@SuppressWarnings("unchecked")
 	@TemplatesPrimitives
+	@Inlinable(inliner = StaticInvokeInliner.class, tag = "0,1,3")
 	public static Object invoke(Object o, String name, Class[] argTypes, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
 			Method m = getMethodForArgTypes(o.getClass(), name, argTypes);
@@ -198,6 +194,7 @@ public class Methods {
 	}
 
 	@TemplatesPrimitives
+	@Inlinable(inliner = StaticInvokeInliner.class, tag = "0,1,2")
 	public static Object invoke(Object o, String name, Object... params) throws ReflectionException, InvocationTargetException {
 		try {
 			Method m = getMethodForArgs(o.getClass(), name, params);

@@ -33,7 +33,7 @@ import java.util.Set;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
-import com.ochafik.lang.jeneral.annotations.Instantiate;
+import com.ochafik.lang.jeneral.annotations.SummonTemplate;
 import com.ochafik.lang.jeneral.annotations.Param;
 import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Property;
@@ -98,7 +98,7 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 	public Collection<String> supportedAnnotationTypes() {
 		return Arrays.asList(new String[] {
 			Template.class.getName(), 
-			Instantiate.class.getName(),
+			SummonTemplate.class.getName(),
 			Param.class.getName(),
 			Value.class.getName(),
 			Property.class.getName(),

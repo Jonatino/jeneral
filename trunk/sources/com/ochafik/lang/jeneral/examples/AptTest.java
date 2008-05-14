@@ -8,20 +8,22 @@ public class AptTest {
 	static String source(Class<?> c) {
 		return sourcePath + c.getName().replace('.', '/') + ".java "; 
 	}
-	static String sourcePath = "sources/";
+	static String sourcePath = "";//"sources/";
 	
 	public static void main(String[] args) {
 		System.out.println("Running in " + new File(".").getAbsolutePath());
 		String cmd;
 		if (true) {
 			cmd = 
-				"-cp classes:libraries/velocity.jar:libraries/spoon.jar " +
+				"-cp ../classes:../libraries/velocity.jar:../libraries/spoon.jar " +
 				"-factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory " +
-				"-d classes " +
-				"-s sources/.apt_generated " +
+				"-d ../classes " +
+				"-s ../sources/.apt_generated " +
 				source(ElementsBuilder.class) +
 				source(EvalExample.class) +
-				source(InstantiationExample.class)
+				source(InstantiationExample.class) + 
+				source(EvalExample.class) + 
+				source(PArrayList.class)
 			;
 		} else {
 			cmd = 

@@ -3,6 +3,7 @@ import java.util.List;
 
 import spoon.processing.FactoryAccessor;
 import spoon.reflect.CoreFactory;
+import spoon.reflect.Factory;
 import spoon.reflect.code.CtArrayAccess;
 import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBlock;
@@ -83,7 +84,7 @@ public class SpoonHelper {
 		if (type.isPrimitive()) {
 			//return newSnippet(primitiveToClassAccess.get(type.getName()));
 			try {
-				Class<?> wrapper = TypeUtils.wrapPrimitive(type);
+				Class<?> wrapper = TypeUtils.wrapPrimitiveClass(type);
 				CtFieldReference field = Field().createReference(wrapper.getField("TYPE"));
 				CtFieldAccess<Object> fieldAccess = Core().createFieldAccess();
 				//fieldAccess.set.setFinal(true);
@@ -161,16 +162,10 @@ public class SpoonHelper {
 		return arrayAccess;
 	}
 
-	public CtCodeSnippetExpression<Object> newSnippet(String string) {
-		CtCodeSnippetExpression<Object> snippet = Core().createCodeSnippetExpression();
-		snippet.setValue(string);
-		return snippet;
-	}
-
 	@SuppressWarnings("unchecked")
 	public static <T> Class<T> getObjectWrapper(Class<T> classReplacement) {
 		if (classReplacement.isPrimitive())
-			return TypeUtils.wrapPrimitive(classReplacement);
+			return TypeUtils.wrapPrimitiveClass(classReplacement);
 		return classReplacement;
 	}
 
@@ -239,6 +234,10 @@ public class SpoonHelper {
 				return false;
 		
 		return true;
+	}
+
+	public Factory getFactory() {
+		return factoryAccessor.getFactory();
 	}
 	
 }
