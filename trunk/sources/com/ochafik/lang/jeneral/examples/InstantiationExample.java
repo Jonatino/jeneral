@@ -18,7 +18,7 @@ import com.ochafik.lang.jeneral.annotations.Value;
 public class InstantiationExample {
 	public static void main(String[] args) {
 		//ElementsBuilder__int intBuilder = new ElementsBuilder__int("test");
-		//EvalExample__int intEval;
+		EvalExample__int intEval;
 		//PArrayList__ intList;
 		//TextElementsBuilder
 		try {

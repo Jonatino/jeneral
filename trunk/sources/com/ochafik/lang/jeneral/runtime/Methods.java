@@ -3,6 +3,7 @@ package com.ochafik.lang.jeneral.runtime;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 
 import spoon.reflect.code.CtExpression;
@@ -86,7 +87,7 @@ public class Methods {
 			if (matches)
 				return m;
 		}
-		throw new ReflectionException("Cannot find matching method in " + c.getName() + " for arguments " + name + "(" + com.ochafik.util.string.StringUtils.implode(args, ", ") + ")");
+		throw new ReflectionException("Cannot find matching method in " + c.getName() + " for arguments " + name + "(" + com.ochafik.util.string.StringUtils.implode(Arrays.asList(args), ", ") + ")");
 	}
 	private static Method getMethodForArgTypes(Class<?> c, String name, Class<?>... args) throws ReflectionException {
 		int nArgs = args.length;
@@ -122,7 +123,7 @@ public class Methods {
 			if (matches)
 				return m;
 		}
-		throw new ReflectionException("Cannot find matching method in " + c.getName() + " for arguments (" + com.ochafik.util.string.StringUtils.implode(args, ", ") + ")");
+		throw new ReflectionException("Cannot find matching method in " + c.getName() + " for arguments (" + com.ochafik.util.string.StringUtils.implode(Arrays.asList(args), ", ") + ")");
 	}
 	
 	public static class StaticInvokeInliner extends Inliner {

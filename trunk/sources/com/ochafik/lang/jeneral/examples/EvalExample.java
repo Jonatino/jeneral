@@ -9,7 +9,7 @@ import com.ochafik.lang.jeneral.runtime.Methods;
 
 @Template
 public abstract class EvalExample<E> implements _EvalExample<E> {
-
+ 
 	@ParamConstructor(returnNeutralValue = true)
 	abstract E neutral_E();
 
