@@ -18,12 +18,11 @@ public class AptTest {
 				"-cp ../classes:../libraries/velocity.jar:../libraries/spoon.jar " +
 				"-factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory " +
 				"-d ../classes " +
-				"-s ../sources/.apt_generated " +
-				source(ElementsBuilder.class) +
-				source(EvalExample.class) +
-				source(InstantiationExample.class) + 
-				source(EvalExample.class) + 
-				source(PArrayList.class)
+				"-s ../sources/.apt_generated "
+				+ source(ElementsBuilder.class)
+				//+ source(EvalExample.class)
+				+ source(InstantiationExample.class) 
+				// + source(PArrayList.class)
 			;
 		} else {
 			cmd = 

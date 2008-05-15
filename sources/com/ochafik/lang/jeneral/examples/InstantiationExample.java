@@ -12,13 +12,19 @@ import com.ochafik.lang.jeneral.annotations.Value;
 @SummonTemplates({
 	@SummonTemplate(template = ElementsBuilder.class, params = { @Param(@Value(Integer.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Integer.class)) }),
-	@SummonTemplate(template = TextElementsBuilder.class, params = { @Param(@Value(JLabel.class)) }),
-	@SummonTemplate(template = PArrayList.class, params = { @Param(@Value(Integer.class)) })
-}) 
+	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Float.class)) }),
+	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Double.class)) }),
+	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Long.class)) }),
+	@SummonTemplate(template = TextElementsBuilder.class, params = { @Param(@Value(JLabel.class)) })
+	//@SummonTemplate(template = PArrayList.class, params = { @Param(@Value(Integer.class)) })
+})
 public class InstantiationExample {
 	public static void main(String[] args) {
-		//ElementsBuilder__int intBuilder = new ElementsBuilder__int("test");
+		ElementsBuilder__int intBuilder = new ElementsBuilder__int("test");
 		EvalExample__int intEval;
+		EvalExample__float floatEval;
+		EvalExample__double doubleEval;
+		EvalExample__long longEval;
 		//PArrayList__ intList;
 		//TextElementsBuilder
 		try {

@@ -19,13 +19,42 @@
 */
 package com.ochafik.lang.jeneral.runtime;
 
+import spoon.reflect.code.CtInvocation;
+
+import com.ochafik.lang.jeneral.annotations.Inlinable;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
+import com.ochafik.lang.jeneral.processors.Inliner;
 
 @TemplatesPrimitives
 public interface Array<T> {
+	
+	@Inlinable(inliner = GetterInliner.class)
 	public T get(int i);
+	
+	@Inlinable(inliner = SetterInliner.class)
 	public T set(int i, T value);
+	
+	@Inlinable(inliner = LengthInliner.class)
 	public int length();
+	
+	@Inlinable(inliner = GetArrayInliner.class)
 	public Object getArray();
-	//public void sort(int ...); Arrays.sort(...);
+	
+	
+	public class GetterInliner extends Inliner { public void process(CtInvocation<?> element) {
+		element.replace(getFactory().Code().createCodeSnippetExpression(element.getTarget() + "[" + element.getArguments().get(0) + "]"));
+	}}
+	
+	public class SetterInliner extends Inliner { public void process(CtInvocation<?> element) {
+		element.replace(getFactory().Code().createCodeSnippetExpression(element.getTarget() + "[" + element.getArguments().get(0) + "] = " + element.getArguments().get(1)));
+	}}
+	
+	public class LengthInliner extends Inliner { public void process(CtInvocation<?> element) {
+		element.replace(getFactory().Code().createCodeSnippetExpression(element.getTarget() + ".length"));
+	}}
+	
+	public class GetArrayInliner extends Inliner { public void process(CtInvocation<?> element) {
+		element.replace(element.getTarget());
+	}}
+	
 }

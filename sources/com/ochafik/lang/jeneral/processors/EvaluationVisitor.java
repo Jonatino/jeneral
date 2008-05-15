@@ -110,14 +110,14 @@ public class EvaluationVisitor extends CtScanner {
 				return;
 			}
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			//ex.printStackTrace();
 		}
 		
 		try {
 			if (!SpoonHelper.hasArgumentsWithAcceptableTypesForEval(invocation))
 				return;
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			//ex.printStackTrace();
 			return;
 		}
 		
@@ -173,7 +173,8 @@ public class EvaluationVisitor extends CtScanner {
 				
 		} catch (Exception e) {
 			if (!exe.getSimpleName().contains("init>"))
-				e.printStackTrace();
+				//e.printStackTrace();
+				System.err.println(e);
 		}
 	}
 	public Object eval(CtExpression<?> argument) throws Exception {
