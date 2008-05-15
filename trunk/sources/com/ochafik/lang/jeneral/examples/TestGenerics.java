@@ -3,13 +3,12 @@ import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
 import com.ochafik.lang.jeneral.annotations.Property;
 import com.ochafik.lang.jeneral.annotations.Template;
-import com.ochafik.lang.jeneral.processors.MyUtilityClass;
 
 @Includes({
     @Include(type = MyUtilityClass.class, keepConstructors = false),
     @Include(script = "scripts/test.vm", engine = "Velocity")
 })
-@Template
+@Template 
 public abstract class TestGenerics<T> implements _TestGenerics<T> {
     @Property(construct = true)
     String name;
