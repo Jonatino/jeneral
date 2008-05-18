@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import com.ochafik.lang.jeneral.annotations.SummonTemplates;
 import com.ochafik.lang.jeneral.annotations.TemplatesPrimitives;
 import com.ochafik.lang.jeneral.annotations.Include;
 import com.ochafik.lang.jeneral.annotations.Includes;
@@ -106,6 +107,8 @@ public class TemplateProcessorFactory implements AnnotationProcessorFactory {
 			ParamConstructor.class.getName(),
 			//Array.class.getName(),
 			Include.class.getName(),
+			SummonTemplate.class.getName(),
+			SummonTemplates.class.getName(),
 			Includes.class.getName()
 		});
 	}

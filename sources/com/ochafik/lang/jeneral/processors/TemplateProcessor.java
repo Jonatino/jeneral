@@ -969,18 +969,20 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		try {
-			log("Instantiating : \n\t" + StringUtils.implode(instantiationParamsSet.keySet(), "\n\t"));
-			
-			Set<InstantiationResult> results = InstantiationUtils.instantiate(instantiationParamsSet.keySet(), sourcePath);
-			for (InstantiationResult result : results) {
-				try {
-					templateProcessorFactory.declareInstantiation(result.instantiationParams);
-					PrintWriter file = environment.getFiler().createSourceFile(result.qualifiedName);
-					file.print(result.sourceCode);
-					file.close();
-				} catch (IOException ex) {
-					logError(instantiationParamsSet.get(result.instantiationParams), ex);
-				}
+			//log("Instantiating : \n\t" + StringUtils.implode(instantiationParamsSet.keySet(), "\n\t"));
+			for (InstantiationParams param : instantiationParamsSet.keySet()) {
+				log("Instantiating " + param);
+				Set<InstantiationResult> results = InstantiationUtils.instantiate(Collections.singleton(param), sourcePath);
+				for (InstantiationResult result : results) {
+					try {
+						templateProcessorFactory.declareInstantiation(result.instantiationParams);
+						PrintWriter file = environment.getFiler().createSourceFile(result.qualifiedName);
+						file.print(result.sourceCode);
+						file.close();
+					} catch (IOException ex) {
+						logError(instantiationParamsSet.get(result.instantiationParams), ex);
+					}
+				}	
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

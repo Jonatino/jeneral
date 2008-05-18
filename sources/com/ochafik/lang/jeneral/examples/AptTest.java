@@ -19,7 +19,7 @@ public class AptTest {
 				"-factory com.ochafik.lang.jeneral.processors.TemplateProcessorFactory " +
 				"-d ../classes " +
 				"-s ../sources/.apt_generated "
-				+ source(ElementsBuilder.class)
+				//+ source(ElementsBuilder.class)
 				//+ source(EvalExample.class)
 				+ source(InstantiationExample.class) 
 				// + source(PArrayList.class)

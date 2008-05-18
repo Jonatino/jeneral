@@ -15,8 +15,8 @@ import com.ochafik.lang.jeneral.annotations.Value;
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Float.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Double.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Long.class)) }),
-	@SummonTemplate(template = TextElementsBuilder.class, params = { @Param(@Value(JLabel.class)) })
-	//@SummonTemplate(template = PArrayList.class, params = { @Param(@Value(Integer.class)) })
+	@SummonTemplate(template = TextElementsBuilder.class, params = { @Param(@Value(JLabel.class)) }), 
+	@SummonTemplate(template = PArrayList.class, params = { @Param(@Value(Integer.class)) })
 })
 public class InstantiationExample {
 	public static void main(String[] args) {
@@ -25,7 +25,7 @@ public class InstantiationExample {
 		EvalExample__float floatEval;
 		EvalExample__double doubleEval;
 		EvalExample__long longEval;
-		//PArrayList__ intList;
+		PArrayList__int intList;
 		//TextElementsBuilder
 		try {
 			//intBuilder.buildElement(1);
