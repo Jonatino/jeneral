@@ -19,7 +19,7 @@ More info on this configuration step is available in eclipse documentation :  [h
 {{{
 	javac -cp myDir1:lib1.jar... path/myClass.java
 }}}
-becomes : 
+ becomes : 
 {{{
 	apt -factorypath jeneral.jar -cp jeneral.jar:myDir1:lib1.jar... path/myClass.java
 }}}
