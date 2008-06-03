@@ -13,7 +13,7 @@
 
 More info on this configuration step is available in eclipse documentation :  [http://help.eclipse.org/help33/index.jsp?topic=/org.eclipse.jdt.doc.isv/guide/jdt_apt_getting_started.htm Configure Apt in Eclipse]
 
-= Bare JDK (>= 5) =
+= Bare JDK (5+) =
  * Download jeneral.jar.
  * Use apt instead of javac to compile your code : 
 {{{
@@ -24,4 +24,3 @@ becomes :
 	apt -factorypath jeneral.jar -cp jeneral.jar:myDir1:lib1.jar... path/myClass.java
 }}}
  * Now go to the [QuickStart] section.
-
