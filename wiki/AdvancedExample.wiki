@@ -58,7 +58,7 @@ public abstract class MonTemplate<U, V> implements MonTemplate_Template<U, V> {
 	String roProperty;
 	
 	public static void main(String[] args) {
-		MonTemplate<Integer, Integer> temp = MonTemplate_Template.Factory.newInstance(Integer.class, Integer.class, 1);
+		MonTemplate<Integer, Integer> temp = MonTemplate.template.newInstance(Integer.class, Integer.class, 1);
 		Map<String, Object> parameters = temp.getTemplate().getParameters();
 	}
 }
