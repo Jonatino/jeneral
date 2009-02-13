@@ -61,4 +61,4 @@ public abstract class ElementsBuilder<T> implements ElementsBuilder_Template<T> 
 = Credits =
 
 Jeneral would be nothing without the amazing [http://spoon.gforge.inria.fr/ Spoon] library, which it needs to work.
-
+Make sure you read the [License License] page for more information.
