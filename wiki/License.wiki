@@ -1,13 +1,18 @@
-Jeneral is an experimental work distributed under the CeCILL-C license.
-It ships with an unmodified copy of the great [http://spoon.gforge.inria.fr/ Spoon] library (also released under the CeCILL-C license), which source code is available [/Java/thirdparty/spoon-src.zip here] or on their website.
+= Jeneral License = 
 
-In short, this license is rather similar to the LGPL license.
+Jeneral is an experimental work distributed under the Apache 2.0 license.
+
+= Spoon = 
+
+Jeneral ships with an unmodified copy of the great [http://spoon.gforge.inria.fr/ Spoon] library (released under the CeCILL-C license), which source code is available [/Java/thirdparty/spoon-src.zip here] or on their website.
+
+Here are links to Spoon's license in English and in French (in short, Spoon's license is rather similar to the LGPL license) :
 
 [http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html CeCILL-C license in English]
 
 [http://www.cecill.info/licences/Licence_CeCILL-C_V1-fr.html CeCILL-C license en Francais]
 
-Important excerpts from the CeCILL-C license relative to warrantees :
+Important excerpts from the CeCILL-C license relative to Spoon warrantees :
 
 The Licensor's liability is limited to the commitments made under this Agreement and shall not be incurred as a result of in particular: (i) loss due the Licensee's total or partial failure to fulfill its obligations, (ii) direct or consequential loss that is suffered by the Licensee due to the use or performance of the Software, and (iii) more generally, any consequential loss. In particular the Parties expressly agree that any or all pecuniary or business loss (i.e. loss of data, loss of profits, operating loss, loss of customers or orders, opportunity cost, any disturbance to business activities) or any or all legal proceedings instituted against the Licensee by a third party, shall constitute consequential loss and shall not provide entitlement to any or all compensation from the Licensor.
 
