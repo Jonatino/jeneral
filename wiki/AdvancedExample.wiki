@@ -1,4 +1,5 @@
 #summary A more complex example
+#labels Featured
 
 {{{
 
