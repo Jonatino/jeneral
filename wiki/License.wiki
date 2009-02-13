@@ -4,7 +4,8 @@ It ships with an unmodified copy of the great [http://spoon.gforge.inria.fr/ Spo
 In short, this license is rather similar to the LGPL license.
 
 [http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html CeCILL-C license in English]
-[http://www.cecill.info/licences/Licence_CeCILL-C_V1-fr.html CeCILL-C license en Français]
+
+[http://www.cecill.info/licences/Licence_CeCILL-C_V1-fr.html CeCILL-C license en Francais]
 
 Important excerpts from the CeCILL-C license relative to warrantees :
 
