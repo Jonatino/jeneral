@@ -1,4 +1,5 @@
 #summary Jeneral Introduction & Basic example
+#labels Featured
 
 = QuickStart = 
 
