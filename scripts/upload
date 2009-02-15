@@ -1,0 +1,2 @@
+cp /Users/ochafik/Prog/Java/bin/jeneral.jar bin && ls -l bin/jeneral.jar && svn ci -m "" bin/jeneral.jar
+
