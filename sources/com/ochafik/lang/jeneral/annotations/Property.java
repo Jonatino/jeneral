@@ -19,6 +19,11 @@
 */
 package com.ochafik.lang.jeneral.annotations;
 
+import com.ochafik.swing.syntaxcoloring.InputHandler.overwrite;
+
 public @interface Property {
 	boolean construct() default false;
+	boolean readOnly() default false;
+	boolean bound() default false;
+	boolean vetoable() default false;
 }

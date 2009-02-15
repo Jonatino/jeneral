@@ -13,6 +13,7 @@ import com.ochafik.lang.jeneral.annotations.Value;
 	@SummonTemplate(template = ElementsBuilder.class, params = { @Param(@Value(Integer.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Integer.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Float.class)) }),
+	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Short.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Double.class)) }),
 	@SummonTemplate(template = EvalExample.class, params = { @Param(@Value(Long.class)) }),
 	@SummonTemplate(template = TextElementsBuilder.class, params = { @Param(@Value(JLabel.class)) }), 
@@ -24,6 +25,7 @@ public class InstantiationExample {
 		EvalExample__int intEval;
 		EvalExample__float floatEval;
 		EvalExample__double doubleEval;
+		EvalExample__short shortEval;
 		EvalExample__long longEval;
 		PArrayList__int intList;
 		//TextElementsBuilder

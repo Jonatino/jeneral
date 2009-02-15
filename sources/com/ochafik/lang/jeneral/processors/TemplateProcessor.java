@@ -132,10 +132,14 @@ public class TemplateProcessor extends AbstractProcessor {
 	public TemplateProcessor(AnnotationProcessorEnvironment env, TemplateProcessorFactory templateProcessorFactory){
 		super(env);
 		this.templateProcessorFactory = templateProcessorFactory;
-		initVelocity();
 	}
 	
+	boolean velocityInited = false;
 	private void initVelocity() {
+		if (velocityInited)
+			return;
+		
+		velocityInited = true;
 		try {
 			Velocity.init();
 		} catch (Exception e) {
@@ -471,6 +475,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		StringWriter out = new StringWriter();
 		StringWriter errOut = new StringWriter();
 		final PrintWriter epout = new PrintWriter(errOut);
+		initVelocity();
 		try {
 			Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, new LogChute() {
 				public void init(RuntimeServices arg0) throws Exception {}
@@ -967,7 +972,8 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			processInstantiation(decl.getAnnotation(SummonTemplate.class), sourcePath, decl, instantiationParamsSet);
 		}
-		
+		//if (true) return;
+	
 		try {
 			//log("Instantiating : \n\t" + StringUtils.implode(instantiationParamsSet.keySet(), "\n\t"));
 			for (InstantiationParams param : instantiationParamsSet.keySet()) {
