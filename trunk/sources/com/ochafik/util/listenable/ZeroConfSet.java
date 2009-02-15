@@ -25,6 +25,7 @@ package com.ochafik.util.listenable;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -78,7 +79,8 @@ public class ZeroConfSet extends DefaultListenableSet<ServiceInfo> implements Se
 		}}.start();
 	}
 	
-static ListenableMap<String, ServiceInfo> advertisedServices;
+	static ListenableMap<String, ServiceInfo> advertisedServices;
+	//static ListenableList<ServiceInfo> advertisedServices;
 	
 	/**
 	 * Read-write listenable list of services advertised by this class.<br/>
@@ -118,6 +120,40 @@ static ListenableMap<String, ServiceInfo> advertisedServices;
 		}
 		return advertisedServices;
 	}
+	/*
+	public static ListenableList<ServiceInfo> getAdvertisedServiceInfos() {
+		if (advertisedServices == null) {
+			advertisedServices = new DefaultListenableList<ServiceInfo>(new ArrayList<ServiceInfo>());
+			advertisedServices.addCollectionListener(new CollectionListener<ServiceInfo>() {
+				//Map<String, ServiceInfo> oldValues = new HashMap<String, ServiceInfo>();
+				public void collectionChanged(CollectionEvent<ServiceInfo> e) {
+					for (ServiceInfo service : e.getElements()) {
+						try {
+							switch (e.getType()) {
+							case UPDATED:
+								getJmDNS().unregisterService(service);
+								
+							case ADDED:
+								//ServiceInfo info = advertisedServices.get(name);
+								getJmDNS().registerService(service);
+								//oldValues.put(name, info);
+								break;
+							case REMOVED:
+								getJmDNS().unregisterService(service);
+								break;
+							}
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+					}
+				}
+			});
+			Runtime.getRuntime().addShutdownHook(new Thread() { public void run() {
+				advertisedServices.clear();
+			}});
+		}
+		return advertisedServices;
+	}*/
 	
 	/**
 	 * Stop the listening of services.
@@ -198,6 +234,7 @@ static ListenableMap<String, ServiceInfo> advertisedServices;
 		for (int i = 5; i-- != 0;) {
 			String name = "Fake iTunes library " + random.nextInt();
 			getAdvertisedServiceInfos().put(name, new ServiceInfo(key, name, 11, "Test service string"));
+			//getAdvertisedServiceInfos().add(new ServiceInfo(key, name, 11, "Test service string"));
 		}
 	}
 }

@@ -7,7 +7,7 @@ import com.ochafik.lang.jeneral.annotations.ParamConstructor;
 import com.ochafik.lang.jeneral.annotations.Template;
 import com.ochafik.lang.jeneral.runtime.Methods;
 
-@Template
+@Template 
 public abstract class EvalExample<E> implements _EvalExample<E> {
  
 	@ParamConstructor(returnNeutralValue = true)

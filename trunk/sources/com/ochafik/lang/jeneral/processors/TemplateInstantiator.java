@@ -746,7 +746,7 @@ public class TemplateInstantiator extends spoon.processing.AbstractProcessor<CtC
 	
 	@SuppressWarnings("unchecked")
 	private void addGetterAndSetter(CtField<?> field, Property propertyAnno, CtClass<?> ctClass) {
-		String capitalizedFieldName = helper.capitalize(field.getSimpleName());
+		String capitalizedFieldName = StringUtils.capitalize(field.getSimpleName());
 		String getterName = "get" + capitalizedFieldName,
 			setterName = "set" + capitalizedFieldName;
 		

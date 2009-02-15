@@ -130,10 +130,6 @@ public class SpoonHelper {
 		return assignment;
 	}
 
-	public String capitalize(String simpleName) {
-		return simpleName.length() == 0 ? "" : Character.toUpperCase(simpleName.charAt(0)) + simpleName.substring(1);
-	}
-
 
 	<T> CtBlock<T> newBlock(CtStatement... statements) {
 		CtBlock<T> block = Core().createBlock();

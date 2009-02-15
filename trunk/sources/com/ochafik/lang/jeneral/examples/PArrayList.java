@@ -511,6 +511,8 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
      * @throws IllegalArgumentException - endpoints out of order (end > begin)
      */
     public PArrayList<E> subList(int begin, int end) {
+    	throw new UnsupportedOperationException();
+    	/*
     	if (end < begin) throw new IllegalArgumentException("end index " + end + " greater than begin index " + begin);
 		if (begin < 0) throw new IndexOutOfBoundsException("begin index can not be < 0");
 		if (end > _data.length()) throw new IndexOutOfBoundsException("end index < " + _data.length());
@@ -519,6 +521,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         	list.add(_data.get(i));
         }
         return list;
+        */
     }
 
 
@@ -575,7 +578,7 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
             return true;
         } else if (other instanceof PArrayList) {
             PArrayList<E> that = (PArrayList<E>)other;
-            if (!getTemplate().equals(that.getClass()))
+            if (!getClass().equals(that.getClass()))
             	return false;
             
             if (that.size() != this.size()) {
@@ -933,7 +936,8 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
         return buf.toString();
     }
 
-    static String capitalize(String s) {
+    @Inline
+    public static String capitalize(String s) {
     	char[] chars = s.toCharArray();
     	if (chars.length == 0)
     		return "";
@@ -985,12 +989,4 @@ public abstract class PArrayList<E extends Comparable<E>> implements Externaliza
     	}
     }
     
-    public static void main(String[] args) {
-		PArrayList<Integer> list = PArrayList.template.newInstance(Integer.class);
-		list.add(1);
-		list.add(2);
-		list.add(3);
-		
-		System.out.println(list);
-	}
 } // PArrayList<E>
